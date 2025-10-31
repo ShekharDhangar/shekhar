@@ -7,7 +7,7 @@
 
 <margin level="small" />
 
-<smallText>I enjoy working with Postgres and Golang. I also like to tinker around with software and hardware!</smallText>
+<smallText>I enjoy building software and love tinkering with hardware.</smallText>
 
 <margin level="small" />
 
