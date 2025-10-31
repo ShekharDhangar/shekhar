@@ -1,11 +1,13 @@
 import React from "react"
 import { cn } from "@/lib/utils"
 
-interface BaseTextProps extends React.HTMLAttributes<HTMLElement> {
+interface BaseTextProps {
   children: React.ReactNode
   color?: string
   className?: string
+  style?: React.CSSProperties
   as?: React.ElementType
+  [key: string]: any // Allow any additional props (like href, target, rel for anchor tags)
 }
 
 export function BaseText({ children, color, className, as: Component = "span", style, ...props }: BaseTextProps) {
