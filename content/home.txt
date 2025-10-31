@@ -3,7 +3,7 @@
 
 <margin level="medium" />
 
-<smallText>I'm a software engineer at <link color="chameleon" href="https://setu.co/">Setu</link>.</smallText>
+<smallText>I'm a software engineer at <link  href="https://setu.co/">Setu</link>.</smallText>
 
 <margin level="small" />
 
@@ -11,4 +11,4 @@
 
 <margin level="small" />
 
-<smallText>Reach out to me on <link color="chameleon" href="https://twitter.com/shekhargd_">Twitter</link>.</smallText>
+<smallText>Reach me over <link href="mailto:me@shekhardhangar.com">email</link>.</smallText>
