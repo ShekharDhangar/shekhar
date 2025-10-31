@@ -9,8 +9,7 @@ const notoSans = Noto_Sans({
 })
 
 export const metadata: Metadata = {
-  title: "Shekhar - Software Engineer",
-  description: "Personal website of Shekhar, Software Engineer at Setu",
+  title: "Shekhar Dhangar",
   icons: {
     icon: "/favicon.svg",
   },
