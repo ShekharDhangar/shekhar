@@ -1,0 +1,14 @@
+<margin level="large" />
+<heading1>Hey, I'm <heading1 >Shekhar</heading1>!</heading1>
+
+<margin level="medium" />
+
+<smallText>I'm a software engineer at <link color="chameleon" href="https://setu.co/">Setu</link>.</smallText>
+
+<margin level="small" />
+
+<smallText>I enjoy working with Postgres and Golang. I also like to tinker around with software and hardware!</smallText>
+
+<margin level="small" />
+
+<smallText>Reach out to me on <link color="chameleon" href="https://twitter.com/shekhargd_">Twitter</link>.</smallText>
