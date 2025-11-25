@@ -18,6 +18,10 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ["var(--font-noto-sans)"],
+        serif: ["var(--font-eb-garamond)"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

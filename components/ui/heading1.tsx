@@ -13,10 +13,13 @@ export function Heading1({ children, color, className }: Heading1Props) {
     <BaseText
       as="span"
       color={color}
-      className={cn("text-4xl font-extrabold tracking-tight lg:text-5xl", className)}
+      className={cn(
+        "font-serif text-4xl font-extrabold tracking-tight lg:text-5xl",
+        className
+      )}
     >
       {children}
     </BaseText>
-  )
+  );
 }
 

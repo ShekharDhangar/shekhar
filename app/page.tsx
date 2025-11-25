@@ -22,8 +22,8 @@ export default function Home() {
   const parsedContent = parseText(content)
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 pt-40 pb-12 max-w-3xl">
+    <main className="min-h-screen bg-background font-sans">
+      <div className="container mx-auto px-4 pt-40 pb-12 max-w-2xl">
         {parsedContent}
       </div>
     </main>
