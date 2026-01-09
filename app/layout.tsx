@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import { EB_Garamond, Noto_Sans } from "next/font/google"
 import "./globals.css"
+import { MovingBackground } from "@/components/moving-background"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 const notoSans = Noto_Sans({ 
   subsets: ["latin"],
@@ -28,7 +30,27 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${notoSans.variable} ${ebGaramond.variable}`}>{children}</body>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  var supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  if (!theme && supportDarkMode) theme = 'dark';
+                  if (theme === 'dark') document.documentElement.classList.add('dark');
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className={`${notoSans.variable} ${ebGaramond.variable}`}>
+        <ThemeToggle />
+        <MovingBackground />
+        {children}
+      </body>
     </html>
   )
 }

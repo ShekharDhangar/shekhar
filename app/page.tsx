@@ -5,6 +5,7 @@ import { Heading1 } from "@/components/ui/heading1"
 import { SmallText } from "@/components/ui/small-text"
 import { Margin } from "@/components/ui/margin"
 import { Link } from "@/components/ui/link"
+import { HomeContent } from "@/components/home-content"
 
 // Register components
 registerComponent("heading1", Heading1)
@@ -22,9 +23,13 @@ export default function Home() {
   const parsedContent = parseText(content)
 
   return (
-    <main className="min-h-screen bg-background font-sans">
-      <div className="container mx-auto px-4 pt-40 pb-12 max-w-2xl">
-        {parsedContent}
+    <main className="min-h-screen bg-transparent font-sans relative">
+      <div className="mx-auto px-12 pt-40 pb-12 max-w-4xl relative z-100" style={{ marginLeft: '20%' }}>
+        <HomeContent>
+          <div id="content-boundary" className="inline-block p-2">
+            {parsedContent}
+          </div>
+        </HomeContent>
       </div>
     </main>
   )
