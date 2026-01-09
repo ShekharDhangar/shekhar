@@ -23,8 +23,8 @@ export default function Home() {
   const parsedContent = parseText(content)
 
   return (
-    <main className="min-h-screen bg-transparent font-sans relative">
-      <div className="mx-auto px-6 sm:px-12 pt-40 pb-12 max-w-4xl relative z-100">
+    <main className="h-screen overflow-hidden bg-transparent font-sans relative">
+      <div className="mx-auto px-6 sm:px-12 pt-20 sm:pt-40 pb-6 sm:pb-12 max-w-4xl relative z-100 h-full overflow-hidden">
         <HomeContent>
           <div id="content-boundary" className="inline-block p-2">
             {parsedContent}

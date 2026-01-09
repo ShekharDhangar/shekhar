@@ -64,10 +64,12 @@ function Character({ char, colorStyle, colorClass }: { char: string, colorStyle:
       className={cn(
         colorClass,
         "transition-all duration-500 antialiased inline-block whitespace-pre relative z-10",
-        isGlowing ? "text-foreground opacity-100" : "text-foreground/50 opacity-100"
+        isGlowing ? "text-foreground opacity-100" : "text-foreground opacity-[0.85]"
       )}
       style={{
         ...colorStyle,
+        // Ensure color is always set explicitly for Samsung browser compatibility
+        color: colorStyle?.color || (isGlowing ? 'hsl(var(--foreground))' : 'hsl(var(--foreground))'),
         textShadow: isGlowing 
           ? "0 0 15px hsla(var(--foreground), 0.4), 0 0 1px currentColor"
           : "0 0 1px currentColor"
