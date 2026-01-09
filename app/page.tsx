@@ -24,7 +24,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-transparent font-sans relative">
-      <div className="mx-auto px-12 pt-40 pb-12 max-w-4xl relative z-100" style={{ marginLeft: '20%' }}>
+      <div className="mx-auto px-6 sm:px-12 pt-40 pb-12 max-w-4xl relative z-100">
         <HomeContent>
           <div id="content-boundary" className="inline-block p-2">
             {parsedContent}

@@ -145,7 +145,6 @@ export function MovingBackground() {
       particles.current.forEach(p => adj.set(p.id, []))
 
       // Check content box state for particle limiting
-      let particleCountInBox = 0
       let isMouseNearBox = false
       let contentBox: DOMRect | null = null
 
@@ -161,10 +160,6 @@ export function MovingBackground() {
         if (mouseDistToBox < 350) {
           isMouseNearBox = true
           contentBox = rect
-          // Count particles in box
-          particleCountInBox = particles.current.filter(p => 
-            p.x > rect.left && p.x < rect.right && p.y > rect.top && p.y < rect.bottom
-          ).length
         }
       }
 
@@ -182,12 +177,33 @@ export function MovingBackground() {
         
         // Check if we should apply magnetic force
         let canAttract = true
-        if (isMouseNearBox && contentBox && particleCountInBox >= CONFIG.PARTICLES.TEXT_MAX_PARTICLES) {
-          // If limit reached and particle is OUTSIDE the box, don't attract it
-          const isParticleInBox = p.x > contentBox.left && p.x < contentBox.right && 
-                                   p.y > contentBox.top && p.y < contentBox.bottom
-          if (!isParticleInBox) {
+        if (isMouseNearBox && contentBox) {
+          // Count particles currently in box in real-time
+          const particlesInBox = particles.current.filter(part => 
+            part.x > contentBox.left && part.x < contentBox.right && 
+            part.y > contentBox.top && part.y < contentBox.bottom
+          )
+          
+          const isCurrentParticleInBox = p.x > contentBox.left && p.x < contentBox.right && 
+                                          p.y > contentBox.top && p.y < contentBox.bottom
+          
+          // If limit reached and this particle is NOT already in the box, don't attract it
+          if (particlesInBox.length >= CONFIG.PARTICLES.TEXT_MAX_PARTICLES && !isCurrentParticleInBox) {
             canAttract = false
+            
+            // Actively repel the particle away from the box to prevent momentum-based entry
+            const boxCenterX = (contentBox.left + contentBox.right) / 2
+            const boxCenterY = (contentBox.top + contentBox.bottom) / 2
+            const repelDx = p.x - boxCenterX
+            const repelDy = p.y - boxCenterY
+            const repelDist = Math.sqrt(repelDx * repelDx + repelDy * repelDy)
+            
+            if (repelDist > 0 && repelDist < 100) {
+              // Strong repulsion when close to the boundary
+              const repelForce = 1.5
+              p.vx += (repelDx / repelDist) * repelForce
+              p.vy += (repelDy / repelDist) * repelForce
+            }
           }
         }
         
@@ -217,6 +233,34 @@ export function MovingBackground() {
         }
 
         p.rotationSpeed *= 0.95
+
+        // AFTER physics, enforce particle limit by ejecting excess particles
+        if (isMouseNearBox && contentBox) {
+          const isCurrentParticleInBox = p.x > contentBox.left && p.x < contentBox.right && 
+                                          p.y > contentBox.top && p.y < contentBox.bottom
+          
+          if (isCurrentParticleInBox) {
+            const particlesInBox = particles.current.filter(part => 
+              part.x > contentBox.left && part.x < contentBox.right && 
+              part.y > contentBox.top && part.y < contentBox.bottom
+            )
+            
+            // If over limit, scatter this particle strongly
+            if (particlesInBox.length > CONFIG.PARTICLES.TEXT_MAX_PARTICLES) {
+              const boxCenterX = (contentBox.left + contentBox.right) / 2
+              const boxCenterY = (contentBox.top + contentBox.bottom) / 2
+              const ejectDx = p.x - boxCenterX
+              const ejectDy = p.y - boxCenterY
+              const ejectDist = Math.sqrt(ejectDx * ejectDx + ejectDy * ejectDy)
+              
+              if (ejectDist > 0) {
+                const ejectForce = 3.0 // Strong ejection
+                p.vx = (ejectDx / ejectDist) * ejectForce
+                p.vy = (ejectDy / ejectDist) * ejectForce
+              }
+            }
+          }
+        }
 
         ctx.save()
         ctx.translate(p.x, p.y)
@@ -312,7 +356,30 @@ export function MovingBackground() {
       mouse.current.active = true
     }
 
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        mouse.current.x = e.touches[0].clientX
+        mouse.current.y = e.touches[0].clientY
+        mouse.current.active = true
+      }
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        mouse.current.x = e.touches[0].clientX
+        mouse.current.y = e.touches[0].clientY
+        mouse.current.active = true
+      }
+    }
+
+    const handleTouchEnd = () => {
+      mouse.current.active = false
+    }
+
     window.addEventListener("mousemove", handleMouseMove)
+    window.addEventListener("touchstart", handleTouchStart, { passive: true })
+    window.addEventListener("touchmove", handleTouchMove, { passive: true })
+    window.addEventListener("touchend", handleTouchEnd)
     
     requestAnimationFrame(() => {
       window.dispatchEvent(new CustomEvent("canvas-ready"))
@@ -323,6 +390,9 @@ export function MovingBackground() {
     return () => {
       window.removeEventListener("resize", resize)
       window.removeEventListener("mousemove", handleMouseMove)
+      window.removeEventListener("touchstart", handleTouchStart)
+      window.removeEventListener("touchmove", handleTouchMove)
+      window.removeEventListener("touchend", handleTouchEnd)
       cancelAnimationFrame(animationFrameId)
       clearInterval(textUpdateInterval)
     }
