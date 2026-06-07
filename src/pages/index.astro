@@ -1,0 +1,80 @@
+---
+export const prerender = true;
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const blogs = (await getCollection('blogs'))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 5);
+
+const learnings = (await getCollection('learnings'))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 5);
+
+const fmt = (d: Date) =>
+  d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+---
+
+<Layout title="Shekhar Dhangar">
+  <div class="section">
+    <p>
+      I'm Shekhar Dhangar, a Software Engineer. I work on distributed systems, backend
+      infrastructure, and occasionally venture into whatever is interesting enough to pull me in.
+    </p>
+    <br />
+    <p>
+      This site is my public second brain — blogs when I have something to say, learnings when
+      I'm figuring something out.
+    </p>
+  </div>
+
+  <div class="section">
+    <h2 class="section-heading">Blogs</h2>
+    <hr class="section-divider" />
+    {blogs.length === 0 ? (
+      <p class="empty-state">Nothing yet.</p>
+    ) : (
+      <ul class="post-list">
+        {blogs.map((post) => (
+          <li class="post-item">
+            <span class="post-bullet">•</span>
+            <div class="post-body">
+              <div class="post-row">
+                <a href={`/blogs/${post.slug}`} class="post-title">{post.data.title}</a>
+                <span class="post-date">{fmt(post.data.date)}</span>
+              </div>
+              {post.data.description && (
+                <p class="post-desc">{post.data.description}</p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+
+  <div class="section">
+    <h2 class="section-heading">Learnings</h2>
+    <hr class="section-divider" />
+    {learnings.length === 0 ? (
+      <p class="empty-state">Nothing yet.</p>
+    ) : (
+      <ul class="post-list">
+        {learnings.map((note) => (
+          <li class="post-item">
+            <span class="post-bullet">•</span>
+            <div class="post-body">
+              <div class="post-row">
+                <a href={`/learnings/${note.slug}`} class="post-title">{note.data.title}</a>
+                <span class="post-date">{fmt(note.data.date)}</span>
+              </div>
+              {note.data.tags && note.data.tags.length > 0 && (
+                <p class="post-desc">{note.data.tags.map((t) => `#${t}`).join(' ')}</p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</Layout>
