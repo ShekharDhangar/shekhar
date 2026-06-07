@@ -1,0 +1,39 @@
+---
+export const prerender = true;
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blogs')).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+
+const fmt = (d: Date) =>
+  d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+---
+
+<Layout title="Blogs — Shekhar">
+  <div class="section">
+    <h1 class="section-heading">Blogs</h1>
+    <hr class="section-divider" />
+    {posts.length === 0 ? (
+      <p class="empty-state">Nothing here yet.</p>
+    ) : (
+      <ul class="post-list">
+        {posts.map((post) => (
+          <li class="post-item">
+            <span class="post-bullet">•</span>
+            <div class="post-body">
+              <div class="post-row">
+                <a href={`/blogs/${post.slug}`} class="post-title">{post.data.title}</a>
+                <span class="post-date">{fmt(post.data.date)}</span>
+              </div>
+              {post.data.description && (
+                <p class="post-desc">{post.data.description}</p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</Layout>

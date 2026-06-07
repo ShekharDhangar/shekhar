@@ -1,0 +1,39 @@
+---
+export const prerender = true;
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const notes = (await getCollection('learnings')).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+);
+
+const fmt = (d: Date) =>
+  d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+---
+
+<Layout title="Learnings — Shekhar">
+  <div class="section">
+    <h1 class="section-heading">Learnings</h1>
+    <hr class="section-divider" />
+    {notes.length === 0 ? (
+      <p class="empty-state">Nothing here yet.</p>
+    ) : (
+      <ul class="post-list">
+        {notes.map((note) => (
+          <li class="post-item">
+            <span class="post-bullet">•</span>
+            <div class="post-body">
+              <div class="post-row">
+                <a href={`/learnings/${note.slug}`} class="post-title">{note.data.title}</a>
+                <span class="post-date">{fmt(note.data.date)}</span>
+              </div>
+              {note.data.tags && note.data.tags.length > 0 && (
+                <p class="post-desc">{note.data.tags.map((t) => `#${t}`).join(' ')}</p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    )}
+  </div>
+</Layout>
