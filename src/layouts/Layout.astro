@@ -1,0 +1,79 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description = 'Shekhar Dhangar — Software Engineer' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;800&display=swap"
+      rel="stylesheet"
+    />
+    <script is:inline>
+      const saved = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+    </script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a href="/" class="sidebar-name">shekhar</a>
+      <nav class="sidebar-nav">
+        <a href="/">/home</a>
+        <a href="/blogs">/blogs</a>
+        <a href="/learnings">/learnings</a>
+      </nav>
+    </aside>
+
+    <header class="topbar">
+      <a href="/" class="topbar-name">shekhar</a>
+      <div class="topbar-right">
+        <a href="/blogs">/blogs</a>
+        <a href="/learnings">/learnings</a>
+        <button class="theme-toggle" aria-label="Toggle theme">○</button>
+      </div>
+    </header>
+
+    <div class="content-wrap">
+      <main class="content">
+        <button class="theme-toggle" aria-label="Toggle theme">○</button>
+        <slot />
+      </main>
+    </div>
+
+    <script is:inline>
+      (function () {
+        function applyTheme(theme) {
+          document.documentElement.setAttribute('data-theme', theme);
+          localStorage.setItem('theme', theme);
+          var icon = theme === 'dark' ? '○' : '●';
+          document.querySelectorAll('.theme-toggle').forEach(function (btn) {
+            btn.textContent = icon;
+          });
+        }
+
+        var current = document.documentElement.getAttribute('data-theme') || 'dark';
+        var icon = current === 'dark' ? '○' : '●';
+        document.querySelectorAll('.theme-toggle').forEach(function (btn) {
+          btn.textContent = icon;
+          btn.addEventListener('click', function () {
+            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            applyTheme(next);
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>
