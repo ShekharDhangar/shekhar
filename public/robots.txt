@@ -1,0 +1,31 @@
+# Everyone is welcome to crawl this site.
+User-agent: *
+Allow: /
+
+# AI agents and training crawlers are explicitly welcome — this site is meant
+# to be easy for an agent to read and understand.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://shekhardhangar.com/sitemap-index.xml
