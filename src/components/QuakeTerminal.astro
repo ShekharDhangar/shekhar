@@ -1,0 +1,650 @@
+---
+import { getSortedPosts } from '../lib/posts';
+import Resize from './icons/Resize.astro';
+
+const toItem = (p: { id: string; data: { title: string } }) => ({ slug: p.id, title: p.data.title });
+const allBlogs = (await getSortedPosts('blogs')).map(toItem);
+const allLearnings = (await getSortedPosts('learnings')).map(toItem);
+---
+
+<script is:inline>
+  window.__loadPagefind = () => import('/pagefind/pagefind.js');
+</script>
+
+<div
+  id="quake-terminal"
+  class="quake"
+  data-blogs={JSON.stringify(allBlogs)}
+  data-learnings={JSON.stringify(allLearnings)}
+  role="dialog"
+  aria-label="Command terminal"
+  aria-hidden="true"
+  transition:persist
+>
+  <div class="quake-bar">
+    <span class="quake-title">terminal</span>
+    <span class="quake-hint">esc to close</span>
+  </div>
+  <div class="quake-output" id="quake-output">
+    <div class="t-line muted">type 'help' to explore</div>
+  </div>
+  <div class="quake-input-row">
+    <span class="quake-prompt">shekhar:~$&nbsp;</span>
+    <input
+      id="quake-input"
+      type="text"
+      class="quake-input"
+      aria-label="Terminal input"
+      autocomplete="off"
+      spellcheck="false"
+    />
+  </div>
+  <button class="quake-resize" id="quake-resize" type="button" aria-label="Resize terminal">
+    <Resize />
+  </button>
+</div>
+
+<button
+  class="quake-launcher"
+  id="quake-launcher"
+  type="button"
+  aria-label="Open terminal (⌘K or Ctrl+K)"
+  transition:persist="terminal-launcher"
+>
+  <span class="quake-launcher-key" id="quake-launcher-key">⌘K</span>
+  <span>terminal</span>
+</button>
+
+<script is:inline>
+  // Show the right modifier per platform: ⌘ on macOS, Ctrl everywhere else.
+  (function () {
+    var key = document.getElementById('quake-launcher-key');
+    if (!key) return;
+    var isMac = /Mac|iPhone|iPod|iPad/i.test(navigator.platform || navigator.userAgent);
+    key.innerHTML = isMac ? '<span class="cmd-glyph">⌘</span>K' : 'Ctrl K';
+  })();
+</script>
+
+<script is:inline>
+  // Restore the terminal's open state synchronously on a full reload, BEFORE the
+  // browser paints — so it appears already-open instead of flickering open after JS.
+  // (View-transition navigation keeps it via transition:persist; this is reload-only.)
+  (function () {
+    if (!sessionStorage.getItem('terminal_open')) return;
+    var q = document.getElementById('quake-terminal');
+    if (!q) return;
+    var geo = sessionStorage.getItem('terminal_geometry');
+    if (geo) {
+      try { Object.assign(q.style, JSON.parse(geo)); }
+      catch (e) { console.warn('Ignoring corrupt terminal geometry:', e); }
+    }
+    q.classList.add('open');
+    q.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('terminal-open');
+  })();
+</script>
+
+<script>
+  import { navigate } from 'astro:transitions/client';
+  import { runCommand, autocomplete, html } from '../lib/terminal';
+  import type { SelectItem } from '../lib/terminal';
+
+  // ── Constants ──────────────────────────────────────────────────
+  const KEY = {
+    OPEN:  'k',
+    ESC:   'Escape',
+    ENTER: 'Enter',
+    TAB:   'Tab',
+    UP:    'ArrowUp',
+    DOWN:  'ArrowDown',
+  } as const;
+
+  const CSS = {
+    OPEN:        'open',
+    DRAGGING:    'dragging',
+    SELECTED:    'selected',
+    LINE:        't-line',
+    COMMAND:     't-command',
+    SELECT_ITEM: 'select-item',
+    SELECT_LIST: 'select-list',
+  } as const;
+
+  const STORAGE_KEY  = 'terminal_history';
+  const SESSION_KEY  = 'terminal_open';
+  const GEOMETRY_KEY = 'terminal_geometry';
+  const MAX_HISTORY  = 50;
+  const PROMPT_TEXT  = 'shekhar:~$ ';
+  const EDGE_MARGIN  = 8;          // keep this much window on-screen
+  const BOTTOM_GAP   = 24;         // default gap above the viewport bottom
+  const MIN_WIDTH    = 320;        // mirrors CSS min-width
+  const MIN_HEIGHT   = 180;        // mirrors CSS min-height
+  const MAX_SEARCH_RESULTS = 12;   // cap full-text search hits shown
+
+  // ── DOM refs ───────────────────────────────────────────────────
+  const quake  = document.getElementById('quake-terminal') as HTMLElement;
+  const output = document.getElementById('quake-output')  as HTMLElement;
+  const input  = document.getElementById('quake-input')   as HTMLInputElement;
+
+  // ── Data ───────────────────────────────────────────────────────
+  const blogs     = JSON.parse(quake.dataset.blogs     ?? '[]');
+  const learnings = JSON.parse(quake.dataset.learnings ?? '[]');
+
+  // ── Pagefind (lazy) ────────────────────────────────────────────
+  let pagefind: any = null;
+
+  async function loadPagefind() {
+    if (pagefind) return pagefind;
+    try {
+      const loader = (window as any).__loadPagefind;
+      if (!loader) return null;
+      pagefind = await loader();
+      await pagefind.init();
+      return pagefind;
+    } catch (err) {
+      console.warn('Pagefind failed to load:', err);
+      return null;
+    }
+  }
+
+  async function runFind(query: string) {
+    printLine('searching…', 'muted');
+    const pf = await loadPagefind();
+    if (!pf) {
+      printLine('search index not found — run npm run build first', 'err');
+      return;
+    }
+    const { results } = await pf.search(query);
+    if (!results.length) {
+      printLine(html`no results for "${query}"`, 'muted');
+      return;
+    }
+    const data = await Promise.all(results.slice(0, MAX_SEARCH_RESULTS).map((r: any) => r.data()));
+    const items = data.map((d: any) => ({
+      slug: d.url,
+      title: d.meta?.title ?? d.url,
+      path: d.url,
+    }));
+    renderSelectList(items);
+  }
+
+  // ── History ────────────────────────────────────────────────────
+  const cmdHistory: string[] = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+  let historyIndex = -1;
+
+  function saveToHistory(cmd: string) {
+    cmdHistory.unshift(cmd);
+    if (cmdHistory.length > MAX_HISTORY) cmdHistory.pop();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cmdHistory));
+    historyIndex = -1;
+  }
+
+  // ── Select mode ────────────────────────────────────────────────
+  let selectMode: { items: SelectItem[]; index: number; container: HTMLElement } | null = null;
+
+  function renderSelectList(items: SelectItem[]) {
+    const container = document.createElement('div');
+    container.className = CSS.SELECT_LIST;
+
+    items.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = [CSS.LINE, CSS.SELECT_ITEM, i === 0 ? CSS.SELECTED : ''].filter(Boolean).join(' ');
+      div.innerHTML = html`&nbsp; <span class="cursor">${i === 0 ? '▶' : '·'}</span> <span class="slug">${item.slug}</span>  <span class="muted">${item.title}</span>`;
+      container.appendChild(div);
+    });
+
+    output.appendChild(container);
+    printLine('<span class="muted">↑↓ navigate · enter to open · esc to cancel</span>');
+    output.scrollTop = output.scrollHeight;
+    selectMode = { items, index: 0, container };
+  }
+
+  function updateSelection(nextIndex: number) {
+    if (!selectMode) return;
+    selectMode.index = nextIndex;
+
+    selectMode.container.querySelectorAll('.' + CSS.SELECT_ITEM).forEach((el, i) => {
+      const isSelected = i === nextIndex;
+      el.classList.toggle(CSS.SELECTED, isSelected);
+      const cursor = el.querySelector('.cursor');
+      if (cursor) cursor.textContent = isSelected ? '▶' : '·';
+    });
+
+    selectMode.container.querySelectorAll('.' + CSS.SELECT_ITEM)[nextIndex]?.scrollIntoView({ block: 'nearest' });
+  }
+
+  function confirmSelection() {
+    if (!selectMode) return false;
+    const item = selectMode.items[selectMode.index];
+    selectMode = null;
+    if (item.external) {
+      window.open(item.path, '_blank', 'noopener,noreferrer');
+      return true;
+    }
+    navigate(item.path);
+    return true;
+  }
+
+  function cancelSelection() {
+    if (!selectMode) return false;
+    selectMode = null;
+    printLine('<span class="muted">cancelled</span>');
+    return true;
+  }
+
+  // ── Output ─────────────────────────────────────────────────────
+  function printLine(markup: string, modifier = '') {
+    const div = document.createElement('div');
+    div.className = CSS.LINE + (modifier ? ` ${modifier}` : '');
+    div.innerHTML = markup;
+    output.appendChild(div);
+    output.scrollTop = output.scrollHeight;
+  }
+
+  function printCommand(cmd: string) {
+    const div = document.createElement('div');
+    div.className = output.children.length > 0 ? `${CSS.LINE} ${CSS.COMMAND}` : CSS.LINE;
+    div.innerHTML = html`<span class="prompt-echo">${PROMPT_TEXT}</span>${cmd}`;
+    output.appendChild(div);
+    output.scrollTop = output.scrollHeight;
+  }
+
+  // ── Run ────────────────────────────────────────────────────────
+  async function run(raw: string) {
+    const trimmed = raw.trim();
+    if (!trimmed) return;
+
+    saveToHistory(trimmed);
+    printCommand(trimmed);
+
+    const [cmd, ...args] = trimmed.split(/\s+/);
+    if (cmd === 'find') {
+      const query = args.join(' ');
+      if (!query) { printLine('usage: find &lt;query&gt;', 'err'); return; }
+      await runFind(query);
+      return;
+    }
+
+    const result = runCommand(trimmed, {
+      blogs,
+      learnings,
+      currentPath: window.location.pathname,
+    });
+
+    switch (result.type) {
+      case 'lines':
+        result.lines.forEach(l => printLine(l.html, l.modifier ?? ''));
+        break;
+      case 'select':
+        renderSelectList(result.items);
+        break;
+      case 'navigate':
+        navigate(result.path);
+        break;
+      case 'clear':
+        output.innerHTML = '';
+        break;
+    }
+  }
+
+  // ── Terminal open / close ──────────────────────────────────────
+  function openTerminal() {
+    ensurePlaced();
+    saveGeometry(); // persist position so a full reload can restore it without a jump
+    quake.classList.add(CSS.OPEN);
+    quake.setAttribute('aria-hidden', 'false');
+    sessionStorage.setItem(SESSION_KEY, '1');
+    input.focus();
+    document.body.classList.add('terminal-open');
+  }
+
+  function closeTerminal() {
+    quake.classList.remove(CSS.OPEN);
+    quake.setAttribute('aria-hidden', 'true');
+    sessionStorage.removeItem(SESSION_KEY);
+    input.blur();
+    selectMode = null;
+    document.body.classList.remove('terminal-open');
+  }
+
+  // Restore open state after View Transition navigation
+  document.addEventListener('astro:page-load', () => {
+    if (sessionStorage.getItem(SESSION_KEY)) {
+      openTerminal();
+      output.scrollTop = output.scrollHeight;
+    }
+  });
+
+  function toggleTerminal() {
+    quake.classList.contains(CSS.OPEN) ? closeTerminal() : openTerminal();
+  }
+
+  // ── Window: drag (title bar) + resize (corner) + geometry ──────
+  const bar = quake.querySelector('.quake-bar') as HTMLElement;
+
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+
+  function setPosition(left: number, top: number) {
+    quake.style.transform = 'none';
+    quake.style.left = `${left}px`;
+    quake.style.top = `${top}px`;
+  }
+
+  function saveGeometry() {
+    sessionStorage.setItem(GEOMETRY_KEY, JSON.stringify({
+      transform: 'none',
+      left: quake.style.left,
+      top: quake.style.top,
+      width: `${quake.offsetWidth}px`,
+      height: `${quake.offsetHeight}px`,
+    }));
+  }
+
+  function restoreGeometry(): boolean {
+    const raw = sessionStorage.getItem(GEOMETRY_KEY);
+    if (!raw) return false;
+    try {
+      Object.assign(quake.style, JSON.parse(raw));
+      return true;
+    } catch (err) {
+      console.warn('Ignoring corrupt terminal geometry:', err);
+      return false;
+    }
+  }
+
+  function centerWindow() {
+    const left = clamp((window.innerWidth - quake.offsetWidth) / 2, EDGE_MARGIN, window.innerWidth - EDGE_MARGIN);
+    const top = Math.max(EDGE_MARGIN, window.innerHeight - quake.offsetHeight - BOTTOM_GAP);
+    setPosition(left, top);
+  }
+
+  // Place the window the first time it opens: persisted geometry, else centered.
+  function ensurePlaced() {
+    if (quake.style.left) return;
+    if (restoreGeometry()) return;
+    centerWindow();
+  }
+
+  let dragOffset: { x: number; y: number } | null = null;
+
+  bar.addEventListener('pointerdown', e => {
+    dragOffset = { x: e.clientX - quake.offsetLeft, y: e.clientY - quake.offsetTop };
+    bar.setPointerCapture(e.pointerId);
+    quake.classList.add(CSS.DRAGGING);
+  });
+
+  bar.addEventListener('pointermove', e => {
+    if (!dragOffset) return;
+    const maxLeft = window.innerWidth - quake.offsetWidth - EDGE_MARGIN;
+    const maxTop = window.innerHeight - quake.offsetHeight - EDGE_MARGIN;
+    setPosition(
+      clamp(e.clientX - dragOffset.x, EDGE_MARGIN, maxLeft),
+      clamp(e.clientY - dragOffset.y, EDGE_MARGIN, maxTop),
+    );
+  });
+
+  function endDrag(e: PointerEvent) {
+    if (!dragOffset) return;
+    dragOffset = null;
+    bar.releasePointerCapture(e.pointerId);
+    quake.classList.remove(CSS.DRAGGING);
+    saveGeometry();
+  }
+  bar.addEventListener('pointerup', endDrag);
+  bar.addEventListener('pointercancel', endDrag);
+
+  // Resize via the corner handle.
+  const resizeHandle = quake.querySelector('#quake-resize') as HTMLElement;
+  let resizeStart: { x: number; y: number; width: number; height: number } | null = null;
+
+  resizeHandle.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    resizeStart = { x: e.clientX, y: e.clientY, width: quake.offsetWidth, height: quake.offsetHeight };
+    resizeHandle.setPointerCapture(e.pointerId);
+    quake.classList.add(CSS.DRAGGING);
+  });
+
+  resizeHandle.addEventListener('pointermove', e => {
+    if (!resizeStart) return;
+    const maxWidth = window.innerWidth - quake.offsetLeft - EDGE_MARGIN;
+    const maxHeight = window.innerHeight - quake.offsetTop - EDGE_MARGIN;
+    quake.style.width = `${clamp(resizeStart.width + (e.clientX - resizeStart.x), MIN_WIDTH, maxWidth)}px`;
+    quake.style.height = `${clamp(resizeStart.height + (e.clientY - resizeStart.y), MIN_HEIGHT, maxHeight)}px`;
+  });
+
+  function endResize(e: PointerEvent) {
+    if (!resizeStart) return;
+    resizeStart = null;
+    resizeHandle.releasePointerCapture(e.pointerId);
+    quake.classList.remove(CSS.DRAGGING);
+    saveGeometry();
+  }
+  resizeHandle.addEventListener('pointerup', endResize);
+  resizeHandle.addEventListener('pointercancel', endResize);
+
+  // ── Input keydown ──────────────────────────────────────────────
+  input.addEventListener('keydown', e => {
+    switch (e.key) {
+      case KEY.ENTER: {
+        if (confirmSelection()) break;
+        const val = input.value;
+        input.value = '';
+        run(val);
+        break;
+      }
+      case KEY.ESC: {
+        if (cancelSelection()) break;
+        closeTerminal();
+        break;
+      }
+      case KEY.TAB: {
+        e.preventDefault();
+        const suggestion = autocomplete(input.value);
+        if (suggestion) input.value = suggestion;
+        break;
+      }
+      case KEY.UP: {
+        e.preventDefault();
+        if (selectMode) { updateSelection(Math.max(0, selectMode.index - 1)); break; }
+        if (historyIndex < cmdHistory.length - 1) input.value = cmdHistory[++historyIndex];
+        break;
+      }
+      case KEY.DOWN: {
+        e.preventDefault();
+        if (selectMode) { updateSelection(Math.min(selectMode.items.length - 1, selectMode.index + 1)); break; }
+        if (historyIndex > 0) { input.value = cmdHistory[--historyIndex]; break; }
+        historyIndex = -1;
+        input.value = '';
+        break;
+      }
+    }
+  });
+
+  // ── Global Cmd+K / Ctrl+K ─────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    if (!(e.metaKey || e.ctrlKey) || e.key !== KEY.OPEN) return;
+    e.preventDefault();
+    toggleTerminal();
+  });
+
+  quake.addEventListener('click', () => input.focus());
+
+  const launcher = document.getElementById('quake-launcher') as HTMLElement;
+  launcher.addEventListener('click', openTerminal);
+
+</script>
+
+<style>
+  .quake {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(680px, 92vw);
+    height: 240px;
+    min-width: 320px;
+    min-height: 180px;
+    max-width: 96vw;
+    max-height: 92vh;
+    z-index: 1000;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+
+  .quake.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .quake.dragging {
+    user-select: none;
+  }
+
+  .quake-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: nwse-resize;
+    touch-action: none;
+    z-index: 2;
+  }
+
+  .quake-resize:hover {
+    color: var(--fg);
+  }
+
+  /* ── Floating launcher ─────────────────────────────────────── */
+  .quake-launcher {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 999;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  .quake-launcher:hover {
+    color: var(--fg);
+    border-color: var(--fg);
+  }
+
+  /* Nudge only the ⌘ glyph down a hair so it baselines with the K.
+     :global because the span is injected via JS (innerHTML). */
+  :global(.cmd-glyph) {
+    position: relative;
+    top: 1px;
+  }
+
+
+  /* Fade out while the terminal window is open */
+  :global(body.terminal-open) .quake-launcher {
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+  }
+
+  @media (max-width: 767px) {
+    .quake-launcher {
+      display: none;
+    }
+  }
+
+  .quake-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 24px;
+    border-bottom: 1px dashed var(--border);
+    flex-shrink: 0;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .quake.dragging .quake-bar {
+    cursor: grabbing;
+  }
+
+  .quake-title,
+  .quake-hint {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .quake-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 24px;
+  }
+
+  .quake-input-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 24px;
+    border-top: 1px dashed var(--border);
+    flex-shrink: 0;
+  }
+
+  .quake-prompt,
+  .prompt-echo {
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-size: 13px;
+  }
+
+  .quake-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--fg);
+    font-family: var(--font-source-code-pro), monospace;
+    font-size: 13px;
+    caret-color: var(--fg);
+    min-width: 0;
+  }
+
+  .t-line {
+    font-size: 13px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .t-line.muted  { color: var(--muted); }
+  .t-line.err    { color: var(--err); }
+  .t-command     { margin-top: 10px; }
+  .t-line .muted { color: var(--muted); }
+  .t-line .slug  { color: var(--muted); }
+  .t-line a      { color: var(--fg); text-decoration: underline; }
+
+  .select-item .cursor          { color: var(--muted); }
+  .select-item.selected .cursor { color: var(--fg); }
+  .select-item.selected .slug   { color: var(--fg); font-weight: 800; }
+
+</style>

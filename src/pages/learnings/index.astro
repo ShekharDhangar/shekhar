@@ -1,14 +1,8 @@
 ---
-export const prerender = true;
 import Layout from '../../layouts/Layout.astro';
-import { getCollection } from 'astro:content';
+import { getSortedPosts, formatDate } from '../../lib/posts';
 
-const notes = (await getCollection('learnings')).sort(
-  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
-);
-
-const fmt = (d: Date) =>
-  d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+const notes = await getSortedPosts('learnings');
 ---
 
 <Layout title="Learnings — Shekhar">
@@ -24,8 +18,8 @@ const fmt = (d: Date) =>
             <span class="post-bullet">•</span>
             <div class="post-body">
               <div class="post-row">
-                <a href={`/learnings/${note.slug}`} class="post-title">{note.data.title}</a>
-                <span class="post-date">{fmt(note.data.date)}</span>
+                <a href={`/learnings/${note.id}`} class="post-title">{note.data.title}</a>
+                <span class="post-date">{formatDate(note.data.date)}</span>
               </div>
               {note.data.tags && note.data.tags.length > 0 && (
                 <p class="post-desc">{note.data.tags.map((t) => `#${t}`).join(' ')}</p>

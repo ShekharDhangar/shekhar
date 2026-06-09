@@ -1,16 +1,22 @@
 /* ── Theme variables ──────────────────────────────── */
 :root {
+  /* Tell the browser we own our theming, so Samsung Internet / Chrome
+     "auto dark" stops force-darkening (which broke light mode + banded the page). */
+  color-scheme: dark;
   --bg: #000;
   --fg: #fff;
-  --muted: #666;
+  --muted: #8a8a8a;
   --border: #444;
+  --err: #ff6b6b;
 }
 
 [data-theme="light"] {
-  --bg: #fff;
+  color-scheme: light;
+  --bg: #F0F1F2;
   --fg: #000;
-  --muted: #999;
+  --muted: #595959; /* ~6:1 on --bg — passes WCAG AA for small text */
   --border: #ccc;
+  --err: #c0392b;
 }
 
 /* ── Base reset ───────────────────────────────────── */
@@ -22,14 +28,22 @@
 
 html {
   font-size: 16px;
+  background: var(--bg);
 }
 
 body {
   background: var(--bg);
   color: var(--fg);
-  font-family: "Source Code Pro", monospace;
+  font-family: var(--font-source-code-pro), monospace;
   line-height: 1.7;
   min-height: 100vh;
+}
+
+/* Instant page swaps — drop Astro's default cross-fade so navigation feels
+   immediate rather than animating in over ~250ms. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
 }
 
 a {
@@ -46,15 +60,24 @@ hr {
   border-top: 1px dashed var(--border);
 }
 
+/* ── Page wrapper — centers sidebar + content together ── */
+.page-wrap {
+  display: flex;
+  max-width: 840px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
 /* ── Sidebar (desktop only) ───────────────────────── */
 .sidebar {
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: 0;
   height: 100vh;
   width: 160px;
+  flex-shrink: 0;
   border-right: 1px dashed var(--border);
-  padding: 40px 24px;
+  /* Top padding matches .content so the sidebar aligns with the page heading. */
+  padding: 48px 24px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -76,10 +99,13 @@ hr {
   font-size: 14px;
 }
 
-.sidebar-nav a:hover {
+.sidebar-nav a:hover,
+.sidebar-nav a.active {
   color: var(--fg);
+  font-weight: 800;
   text-decoration: none;
 }
+
 
 /* ── Top bar (mobile only) ────────────────────────── */
 .topbar {
@@ -87,37 +113,41 @@ hr {
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
+  border-top: 1px dashed var(--border);
   border-bottom: 1px dashed var(--border);
+  margin-top: 12px;
 }
 
-.topbar-name {
-  font-weight: 800;
-  font-size: 14px;
-}
-
-.topbar-right {
+.topbar-left {
   display: flex;
   align-items: center;
   gap: 16px;
   font-size: 13px;
 }
 
-.topbar-right a {
+.topbar-name {
+  font-size: 14px;
+}
+
+.topbar-left a {
   color: var(--muted);
 }
 
-.topbar-right a:hover {
+.topbar-left a:hover,
+.topbar-left a.active {
   color: var(--fg);
+  font-weight: 800;
   text-decoration: none;
 }
 
+
 /* ── Content area ─────────────────────────────────── */
 .content-wrap {
-  margin-left: 160px;
+  flex: 1;
+  min-width: 0;
 }
 
 .content {
-  max-width: 680px;
   padding: 48px 40px;
   position: relative;
 }
@@ -128,14 +158,22 @@ hr {
   border: none;
   color: var(--muted);
   font-family: inherit;
-  font-size: 16px;
   cursor: pointer;
   padding: 0;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .theme-toggle:hover {
   color: var(--fg);
+}
+
+/* Single source of truth for the toggle icon size (overrides the SVG's
+   intrinsic width/height for every toggle instance). */
+.theme-toggle svg {
+  width: 24px;
+  height: 24px;
 }
 
 /* Desktop: toggle floats top-right of content */
@@ -144,6 +182,10 @@ hr {
   top: 48px;
   right: 40px;
 }
+
+/* Show sun in dark mode (click → go light), moon in light mode (click → go dark) */
+[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+[data-theme="light"] .theme-toggle .icon-sun { display: none; }
 
 /* ── Typography ───────────────────────────────────── */
 h1, h2, h3 {
@@ -217,11 +259,44 @@ h1, h2, h3 {
   color: var(--muted);
 }
 
+/* ── Contact icons ────────────────────────────────── */
+.contact-icons-wrap {
+  margin-top: 28px;
+}
+
+.contact-icons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 0;
+}
+
+.contact-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.contact-icon:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+  text-decoration: none;
+}
+
 /* ── Article detail ───────────────────────────────── */
 .back-link {
   color: var(--muted);
   font-size: 13px;
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin-bottom: 32px;
 }
 
@@ -270,7 +345,7 @@ h1, h2, h3 {
 }
 
 .prose code {
-  font-family: "Source Code Pro", monospace;
+  font-family: var(--font-source-code-pro), monospace;
   font-size: 13px;
   background: color-mix(in srgb, var(--fg) 8%, transparent);
   padding: 2px 5px;
@@ -315,17 +390,38 @@ h1, h2, h3 {
     display: none;
   }
 
+  .quake {
+    display: none !important;
+  }
+
   .topbar {
     display: flex;
+    margin: 40px 0 0;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow-y: auto;
+  }
+
+  .page-wrap {
+    flex: 1;
+    min-height: 0;
   }
 
   .content-wrap {
-    margin-left: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .content {
+    flex: 1;
   }
 
   .content {
     padding: 32px 20px;
-    max-width: 100%;
   }
 
   /* Hide the desktop toggle in the content area on mobile */

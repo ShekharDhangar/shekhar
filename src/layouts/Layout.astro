@@ -1,78 +1,130 @@
 ---
 import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import { Font } from 'astro:assets';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import QuakeTerminal from '../components/QuakeTerminal.astro';
+import { SOCIAL_LINKS, EMAIL_HREF } from '../lib/links';
+import { PROFILE, KNOWS_ABOUT } from '../lib/profile';
 
 interface Props {
   title: string;
   description?: string;
 }
 const { title, description = 'Shekhar Dhangar — Software Engineer' } = Astro.props;
+const path = Astro.url.pathname;
+
+// schema.org Person — machine-readable identity for search engines and AI agents.
+// Built from the same single-source constants the rest of the site uses.
+const personLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: PROFILE.name,
+  url: Astro.site?.href,
+  jobTitle: PROFILE.jobTitle,
+  email: EMAIL_HREF.replace('mailto:', ''),
+  description: PROFILE.summary,
+  knowsAbout: KNOWS_ABOUT,
+  sameAs: SOCIAL_LINKS.filter((l) => l.href.startsWith('http')).map((l) => l.href),
+};
 ---
 
 <!doctype html>
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
     <meta name="description" content={description} />
     <title>{title}</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;800&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="canonical" href={new URL(path, Astro.site).href} />
+    <script is:inline type="application/ld+json" set:html={JSON.stringify(personLd)} />
+    <ClientRouter />
+    <Font cssVariable="--font-source-code-pro" preload />
     <script is:inline>
-      const saved = localStorage.getItem('theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', saved);
+      (function () {
+        // Theme priority: explicit user override → OS preference → dark.
+        function preferredTheme() {
+          var saved = localStorage.getItem('theme');
+          if (saved === 'dark' || saved === 'light') return saved;
+          if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light';
+          return 'dark';
+        }
+        window.__preferredTheme = preferredTheme;
+        document.documentElement.setAttribute('data-theme', preferredTheme());
+      })();
     </script>
   </head>
   <body>
-    <aside class="sidebar">
-      <a href="/" class="sidebar-name">shekhar</a>
-      <nav class="sidebar-nav">
-        <a href="/">/home</a>
-        <a href="/blogs">/blogs</a>
-        <a href="/learnings">/learnings</a>
-      </nav>
-    </aside>
-
+    <QuakeTerminal />
     <header class="topbar">
-      <a href="/" class="topbar-name">shekhar</a>
-      <div class="topbar-right">
-        <a href="/blogs">/blogs</a>
-        <a href="/learnings">/learnings</a>
-        <button class="theme-toggle" aria-label="Toggle theme">○</button>
+      <div class="topbar-left">
+        <a href="/" class={`topbar-name${path === '/' ? ' active' : ''}`}>/ shekhar</a>
+        <a href="/blogs" class={path.startsWith('/blogs') ? 'active' : ''}>/ blogs</a>
+        <a href="/learnings" class={path.startsWith('/learnings') ? 'active' : ''}>/ learnings</a>
       </div>
+      <ThemeToggle />
     </header>
 
-    <div class="content-wrap">
-      <main class="content">
-        <button class="theme-toggle" aria-label="Toggle theme">○</button>
-        <slot />
-      </main>
+    <div class="page-wrap">
+      <aside class="sidebar">
+        <a href="/" class="sidebar-name">shekhar</a>
+        <nav class="sidebar-nav">
+          <a href="/blogs" class={path.startsWith('/blogs') ? 'active' : ''}>/blogs</a>
+          <a href="/learnings" class={path.startsWith('/learnings') ? 'active' : ''}>/learnings</a>
+        </nav>
+      </aside>
+
+      <div class="content-wrap">
+        <main class="content">
+          <ThemeToggle />
+          <slot />
+        </main>
+      </div>
     </div>
 
     <script is:inline>
       (function () {
-        function applyTheme(theme) {
-          document.documentElement.setAttribute('data-theme', theme);
-          localStorage.setItem('theme', theme);
-          var icon = theme === 'dark' ? '○' : '●';
-          document.querySelectorAll('.theme-toggle').forEach(function (btn) {
-            btn.textContent = icon;
+        // Bind once even though this inline script re-runs on view transitions.
+        if (window.__themeBound) return;
+        window.__themeBound = true;
+
+        // Delegated so it keeps working after navigation swaps the buttons.
+        document.addEventListener('click', function (e) {
+          if (!e.target.closest('.theme-toggle')) return;
+          var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('theme', next);
+        });
+
+        // Follow the OS only while the user hasn't overridden.
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+          if (localStorage.getItem('theme')) return;
+          document.documentElement.setAttribute('data-theme', window.__preferredTheme());
+        });
+
+        // Re-apply after view-transition navigation, before the new page paints
+        // (the swapped-in HTML resets data-theme to its SSR default).
+        document.addEventListener('astro:after-swap', function () {
+          document.documentElement.setAttribute('data-theme', window.__preferredTheme());
+        });
+
+        // Highlight the current nav link. Runs on first load and after every
+        // view-transition navigation, so the active state stays in sync without
+        // a full refresh.
+        function updateActiveNav() {
+          var path = location.pathname;
+          document.querySelectorAll('.sidebar-nav a, .topbar-left a').forEach(function (a) {
+            var href = a.getAttribute('href');
+            var active = href === '/' ? path === '/' : path.startsWith(href);
+            a.classList.toggle('active', active);
           });
         }
-
-        var current = document.documentElement.getAttribute('data-theme') || 'dark';
-        var icon = current === 'dark' ? '○' : '●';
-        document.querySelectorAll('.theme-toggle').forEach(function (btn) {
-          btn.textContent = icon;
-          btn.addEventListener('click', function () {
-            var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-            applyTheme(next);
-          });
-        });
+        // page-load covers the initial load; after-swap updates the highlight
+        // before the new page paints, so it never lags behind navigation.
+        document.addEventListener('astro:page-load', updateActiveNav);
+        document.addEventListener('astro:after-swap', updateActiveNav);
       })();
     </script>
   </body>

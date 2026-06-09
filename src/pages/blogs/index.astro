@@ -1,14 +1,8 @@
 ---
-export const prerender = true;
 import Layout from '../../layouts/Layout.astro';
-import { getCollection } from 'astro:content';
+import { getSortedPosts, formatDate } from '../../lib/posts';
 
-const posts = (await getCollection('blogs')).sort(
-  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
-);
-
-const fmt = (d: Date) =>
-  d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+const posts = await getSortedPosts('blogs');
 ---
 
 <Layout title="Blogs — Shekhar">
@@ -24,8 +18,8 @@ const fmt = (d: Date) =>
             <span class="post-bullet">•</span>
             <div class="post-body">
               <div class="post-row">
-                <a href={`/blogs/${post.slug}`} class="post-title">{post.data.title}</a>
-                <span class="post-date">{fmt(post.data.date)}</span>
+                <a href={`/blogs/${post.id}`} class="post-title">{post.data.title}</a>
+                <span class="post-date">{formatDate(post.data.date)}</span>
               </div>
               {post.data.description && (
                 <p class="post-desc">{post.data.description}</p>

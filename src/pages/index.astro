@@ -1,22 +1,23 @@
 ---
-export const prerender = true;
 import Layout from '../layouts/Layout.astro';
-import { getCollection } from 'astro:content';
+import { EMAIL_HREF, linkHref } from '../lib/links';
+import GitHub from '../components/icons/GitHub.astro';
+import Twitter from '../components/icons/Twitter.astro';
+import LinkedIn from '../components/icons/LinkedIn.astro';
+import Email from '../components/icons/Email.astro';
 
-const blogs = (await getCollection('blogs'))
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
-  .slice(0, 5);
-
-const learnings = (await getCollection('learnings'))
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
-  .slice(0, 5);
-
-const fmt = (d: Date) =>
-  d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+const contactIcons = [
+  { slug: 'github',   icon: GitHub,   label: 'GitHub',      external: true },
+  { slug: 'twitter',  icon: Twitter,  label: 'Twitter / X', external: true },
+  { slug: 'linkedin', icon: LinkedIn, label: 'LinkedIn',    external: true },
+  { slug: 'email',    icon: Email,    label: 'Email',       external: false },
+].map((c) => ({ ...c, href: linkHref(c.slug) }));
 ---
 
-<Layout title="Shekhar Dhangar">
+<Layout title="Shekhar Dhangar" description="Shekhar Dhangar — software engineer working on distributed systems, backend infrastructure, and whatever's interesting enough to pull me in. Blogs and learnings from my public second brain.">
   <div class="section">
+    <h2 class="section-heading">Hi!</h2>
+    <hr class="section-divider" />
     <p>
       I'm Shekhar Dhangar, a Software Engineer. I work on distributed systems, backend
       infrastructure, and occasionally venture into whatever is interesting enough to pull me in.
@@ -29,52 +30,28 @@ const fmt = (d: Date) =>
   </div>
 
   <div class="section">
-    <h2 class="section-heading">Blogs</h2>
+    <h2 class="section-heading">Contact</h2>
     <hr class="section-divider" />
-    {blogs.length === 0 ? (
-      <p class="empty-state">Nothing yet.</p>
-    ) : (
-      <ul class="post-list">
-        {blogs.map((post) => (
-          <li class="post-item">
-            <span class="post-bullet">•</span>
-            <div class="post-body">
-              <div class="post-row">
-                <a href={`/blogs/${post.slug}`} class="post-title">{post.data.title}</a>
-                <span class="post-date">{fmt(post.data.date)}</span>
-              </div>
-              {post.data.description && (
-                <p class="post-desc">{post.data.description}</p>
-              )}
-            </div>
-          </li>
+    <p>
+      Have something interesting to build? Drop me a <a href={EMAIL_HREF}>mail</a>. I'm open to conversations about hard engineering problems, new projects, or just trading ideas.
+    </p>
+    <div class="contact-icons-wrap">
+      <hr class="section-divider" style="margin-bottom: 0" />
+      <div class="contact-icons">
+        {contactIcons.map(({ href, icon: Icon, label, external }) => (
+          <a
+            href={href}
+            aria-label={label}
+            class="contact-icon"
+            target={external ? '_blank' : undefined}
+            rel={external ? 'noopener noreferrer' : undefined}
+          >
+            <Icon />
+          </a>
         ))}
-      </ul>
-    )}
+      </div>
+      <hr class="section-divider" style="margin-top: 0" />
+    </div>
   </div>
 
-  <div class="section">
-    <h2 class="section-heading">Learnings</h2>
-    <hr class="section-divider" />
-    {learnings.length === 0 ? (
-      <p class="empty-state">Nothing yet.</p>
-    ) : (
-      <ul class="post-list">
-        {learnings.map((note) => (
-          <li class="post-item">
-            <span class="post-bullet">•</span>
-            <div class="post-body">
-              <div class="post-row">
-                <a href={`/learnings/${note.slug}`} class="post-title">{note.data.title}</a>
-                <span class="post-date">{fmt(note.data.date)}</span>
-              </div>
-              {note.data.tags && note.data.tags.length > 0 && (
-                <p class="post-desc">{note.data.tags.map((t) => `#${t}`).join(' ')}</p>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-    )}
-  </div>
 </Layout>

@@ -1,25 +1,26 @@
 ---
-export const prerender = true;
 import Layout from '../../layouts/Layout.astro';
-import { getCollection } from 'astro:content';
+import { getCollection, render } from 'astro:content';
+import { formatDate } from '../../lib/posts';
+import ChevronLeft from '../../components/icons/ChevronLeft.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blogs');
-  return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
 }
 
 const { post } = Astro.props;
-const { Content } = await post.render();
-const fmt = (d: Date) =>
-  d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+const { Content } = await render(post);
 ---
 
 <Layout title={`${post.data.title} — Shekhar`} description={post.data.description}>
-  <a href="/blogs" class="back-link">← blogs</a>
-  <h1 class="section-heading" style="margin-bottom: 8px;">{post.data.title}</h1>
-  <p class="post-meta">{fmt(post.data.date)}</p>
-  <hr class="section-divider" />
-  <article class="prose">
-    <Content />
-  </article>
+  <a href="/blogs" class="back-link"><ChevronLeft size={14} />blogs</a>
+  <div data-pagefind-body>
+    <h1 class="section-heading" style="margin-bottom: 8px;">{post.data.title}</h1>
+    <p class="post-meta">{formatDate(post.data.date)}</p>
+    <hr class="section-divider" />
+    <article class="prose">
+      <Content />
+    </article>
+  </div>
 </Layout>
