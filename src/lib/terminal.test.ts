@@ -280,6 +280,20 @@ describe('clear', () => {
   });
 });
 
+describe('theme', () => {
+  it('dark switches to dark mode', () => {
+    expect(runCommand('dark', ctx())).toEqual({ type: 'theme', value: 'dark' });
+  });
+
+  it('light switches to light mode', () => {
+    expect(runCommand('light', ctx())).toEqual({ type: 'theme', value: 'light' });
+  });
+
+  it('is case-insensitive', () => {
+    expect(runCommand('DARK', ctx())).toEqual({ type: 'theme', value: 'dark' });
+  });
+});
+
 describe('unknown command', () => {
   it('returns error line', () => {
     const result = runCommand('foobar', ctx());

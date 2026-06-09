@@ -16,6 +16,7 @@ export type CommandResult =
   | { type: 'lines';    lines: OutputLine[] }
   | { type: 'select';   items: SelectItem[] }
   | { type: 'navigate'; path: string }
+  | { type: 'theme';    value: 'dark' | 'light' }
   | { type: 'clear' };
 
 export type Context = {
@@ -107,6 +108,7 @@ function cmdHelp(): CommandResult {
     ['learnings',           'go to learnings'],
     ['find <query>',         'full-text search across all posts'],
     ['open <slug>',         'open a post directly'],
+    ['dark / light',        'switch color theme'],
     ['clear',               'clear terminal'],
   ];
   return {
@@ -238,7 +240,7 @@ const STATIC_CMDS = [
   'browse', 'browse blogs', 'browse learnings', 'browse contacts',
   'b blogs', 'b learnings', 'b contacts',
   'cd /blogs', 'cd /learnings', 'cd ..',
-  'open', 'find',
+  'open', 'find', 'dark', 'light',
 ];
 
 export function autocomplete(val: string): string | null {
@@ -271,6 +273,8 @@ export function runCommand(raw: string, ctx: Context): CommandResult {
     case 'home':      return { type: 'navigate', path: '/' };
     case 'blogs':     return { type: 'navigate', path: '/blogs' };
     case 'learnings': return { type: 'navigate', path: '/learnings' };
+    case 'dark':      return { type: 'theme', value: 'dark' };
+    case 'light':     return { type: 'theme', value: 'light' };
     case 'clear':     return { type: 'clear' };
     default:
       return {

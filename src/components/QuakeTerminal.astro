@@ -280,6 +280,11 @@ const allLearnings = (await getSortedPosts('learnings')).map(toItem);
       case 'navigate':
         navigate(result.path);
         break;
+      case 'theme':
+        document.documentElement.setAttribute('data-theme', result.value);
+        localStorage.setItem('theme', result.value);
+        printLine('theme set to ' + result.value, 'muted');
+        break;
       case 'clear':
         output.innerHTML = '';
         break;
