@@ -1,0 +1,10 @@
+#!/bin/sh
+# Pre-commit gate. Enable once per clone with:
+#   git config core.hooksPath .githooks
+set -e
+
+echo "› custom lint rules"
+npm run --silent lint
+
+echo "› tests"
+npm test --silent
