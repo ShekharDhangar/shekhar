@@ -39,6 +39,17 @@ body {
   min-height: 100vh;
 }
 
+/* Crossfade themed surfaces on a dark/light switch so they change together
+   instead of hard-repainting in stages (which flashed a brief black patch). */
+html,
+body,
+.sidebar,
+.topbar,
+.quake,
+hr {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
 /* Instant page swaps — drop Astro's default cross-fade so navigation feels
    immediate rather than animating in over ~250ms. */
 ::view-transition-old(root),
