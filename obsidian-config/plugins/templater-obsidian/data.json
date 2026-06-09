@@ -1,0 +1,9 @@
+{
+  "trigger_on_file_creation": true,
+  "templates_folder": "templates",
+  "enable_folder_templates": true,
+  "folder_templates": [
+    { "folder": "blogs", "template": "templates/blog" },
+    { "folder": "learnings", "template": "templates/learning" }
+  ]
+}
