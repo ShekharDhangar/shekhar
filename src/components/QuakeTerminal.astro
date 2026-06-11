@@ -438,7 +438,11 @@ const allLearnings = (await getSortedPosts('learnings')).map(toItem);
       }
       case KEY.TAB: {
         e.preventDefault();
-        const suggestion = autocomplete(input.value);
+        const suggestion = autocomplete(input.value, {
+          blogs,
+          learnings,
+          currentPath: window.location.pathname,
+        });
         if (suggestion) input.value = suggestion;
         break;
       }
@@ -473,6 +477,19 @@ const allLearnings = (await getSortedPosts('learnings')).map(toItem);
     if (e.key !== KEY.ESC || !quake.classList.contains(CSS.OPEN)) return;
     if (cancelSelection()) return;
     closeTerminal();
+  });
+
+  // Paste explicitly into the input at the cursor. Commands are single-line, so
+  // newlines collapse to spaces. Done by hand so paste is reliable regardless of
+  // focus quirks across view-transition navigation.
+  input.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData?.getData('text') ?? '').replace(/\s*\r?\n\s*/g, ' ');
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    input.value = input.value.slice(0, start) + text + input.value.slice(end);
+    const caret = start + text.length;
+    input.setSelectionRange(caret, caret);
   });
 
   quake.addEventListener('click', () => input.focus());

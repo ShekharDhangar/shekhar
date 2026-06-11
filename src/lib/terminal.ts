@@ -243,8 +243,36 @@ const STATIC_CMDS = [
   'open', 'find', 'dark', 'light',
 ];
 
-export function autocomplete(val: string): string | null {
+// Commands whose argument is a section or a post slug — completed dynamically.
+const ARG_CMDS = new Set(['cd', 'open', 'ls', 'browse', 'b']);
+
+function argCandidates(cmd: string, ctx: Context): string[] {
+  const slugs = [...ctx.blogs, ...ctx.learnings].map(p => p.slug);
+  switch (cmd) {
+    case 'open':   return slugs;
+    case 'cd':     return ['blogs', 'learnings', '/blogs', '/learnings', '..'];
+    case 'ls':     return ['blogs', 'learnings'];
+    case 'browse':
+    case 'b':      return ['blogs', 'learnings', 'contacts'];
+    default:       return [];
+  }
+}
+
+export function autocomplete(val: string, ctx?: Context): string | null {
   if (!val) return null;
+
+  // Completing an argument ("cmd partial") against real slugs/sections.
+  const parts = val.split(/\s+/);
+  if (ctx && parts.length >= 2) {
+    const cmd = parts[0].toLowerCase();
+    if (ARG_CMDS.has(cmd)) {
+      const arg = parts.slice(1).join(' ');
+      const match = argCandidates(cmd, ctx).find(c => c.startsWith(arg) && c !== arg);
+      return match ? `${parts[0]} ${match}` : null;
+    }
+  }
+
+  // Completing the command name itself.
   return STATIC_CMDS.find(c => c.startsWith(val) && c !== val) ?? null;
 }
 

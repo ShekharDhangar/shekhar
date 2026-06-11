@@ -383,4 +383,34 @@ describe('autocomplete', () => {
   it('returns null for no match', () => {
     expect(autocomplete('zzz')).toBeNull();
   });
+
+  it('completes a post slug for open given context', () => {
+    expect(autocomplete('open raf', ctx())).toBe('open raft-consensus');
+    expect(autocomplete('open rust', ctx())).toBe('open rust-lifetimes');
+  });
+
+  it('completes a section for cd/ls — but not a post slug (a post is not a dir)', () => {
+    expect(autocomplete('cd bl', ctx())).toBe('cd blogs');
+    expect(autocomplete('ls lea', ctx())).toBe('ls learnings');
+    expect(autocomplete('cd raf', ctx())).toBeNull();
+  });
+
+  it('returns null for an unknown argument', () => {
+    expect(autocomplete('open zzz', ctx())).toBeNull();
+  });
+
+  it('does not complete slugs without context', () => {
+    expect(autocomplete('open raf')).toBeNull();
+  });
+});
+
+describe('cd is for directories, not posts', () => {
+  it('navigates into a section', () => {
+    expect(runCommand('cd blogs', ctx())).toEqual({ type: 'navigate', path: '/blogs' });
+  });
+
+  it('errors on a bare post slug — use `open` instead', () => {
+    const result = runCommand('cd raft-consensus', ctx());
+    expect(result.type).toBe('lines');
+  });
 });
