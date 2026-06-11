@@ -127,5 +127,117 @@ const personLd = {
         document.addEventListener('astro:after-swap', updateActiveNav);
       })();
     </script>
+
+    <script is:inline>
+      (function () {
+        // Bind once; the handler re-runs on every navigation via astro:page-load.
+        if (window.__copyBtnBound) return;
+        window.__copyBtnBound = true;
+
+        // Whether a block gets a button is decided at build time by the Shiki
+        // `copy-attr` transformer (driven by the fence meta) and surfaced as
+        // data-copy. Here we just honor it.
+        function addCopyButtons() {
+          document.querySelectorAll('pre.astro-code').forEach(function (pre) {
+            if (pre.dataset.copyReady) return;
+            pre.dataset.copyReady = '1';
+            if (pre.getAttribute('data-copy') !== 'true') return;
+
+            // Wrap so the button stays pinned while the <pre> scrolls horizontally.
+            var wrap = document.createElement('div');
+            wrap.className = 'code-block';
+            pre.parentNode.insertBefore(wrap, pre);
+            wrap.appendChild(pre);
+
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'copy-btn';
+            btn.textContent = 'Copy';
+            btn.setAttribute('aria-label', 'Copy code to clipboard');
+            btn.addEventListener('click', function () {
+              var code = pre.querySelector('code');
+              navigator.clipboard.writeText(code.innerText).then(function () {
+                btn.textContent = 'Copied';
+                btn.classList.add('copied');
+                setTimeout(function () {
+                  btn.textContent = 'Copy';
+                  btn.classList.remove('copied');
+                }, 1400);
+              });
+            });
+            wrap.appendChild(btn);
+          });
+        }
+
+        document.addEventListener('astro:page-load', addCopyButtons);
+      })();
+    </script>
+
+    <script is:inline>
+      (function () {
+        if (window.__linkPreviewBound) return;
+        window.__linkPreviewBound = true;
+
+        // Hover previews are a desktop nicety — skip touch / coarse pointers.
+        if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+        var card, img, hideTimer;
+        var cache = {}; // href -> screenshot URL, so re-hover never refetches
+
+        function ensureCard() {
+          if (card) return;
+          card = document.createElement('div');
+          card.className = 'link-preview-card';
+          img = document.createElement('img');
+          img.alt = '';
+          card.appendChild(img);
+          document.body.appendChild(card);
+        }
+
+        function screenshotURL(href) {
+          // microlink returns the raw screenshot image via embed=screenshot.url.
+          return 'https://api.microlink.io/?url=' + encodeURIComponent(href) +
+            '&screenshot=true&meta=false&embed=screenshot.url';
+        }
+
+        function position(link) {
+          var r = link.getBoundingClientRect();
+          var w = card.offsetWidth || 320;
+          var left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), window.innerWidth - w - 8);
+          var top = r.top - card.offsetHeight - 10;
+          if (top < 8) top = r.bottom + 10; // not enough room above → flip below
+          card.style.left = left + 'px';
+          card.style.top = top + 'px';
+        }
+
+        function show(link) {
+          ensureCard();
+          clearTimeout(hideTimer);
+          var href = link.href;
+          if (!cache[href]) cache[href] = screenshotURL(href); // lazy: first hover only
+          if (img.src !== cache[href]) img.src = cache[href];
+          requestAnimationFrame(function () {
+            position(link);
+            card.classList.add('visible');
+          });
+        }
+
+        function hide() {
+          if (!card) return;
+          hideTimer = setTimeout(function () { card.classList.remove('visible'); }, 80);
+        }
+
+        function bindLinks() {
+          document.querySelectorAll('a[data-preview]').forEach(function (link) {
+            if (link.__previewBound) return;
+            link.__previewBound = true;
+            link.addEventListener('mouseenter', function () { show(link); });
+            link.addEventListener('mouseleave', hide);
+          });
+        }
+
+        document.addEventListener('astro:page-load', bindLinks);
+      })();
+    </script>
   </body>
 </html>

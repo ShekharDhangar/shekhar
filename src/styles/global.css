@@ -13,7 +13,7 @@
 [data-theme="light"] {
   color-scheme: light;
   --bg: #F0F1F2;
-  --fg: #000;
+  --fg: #1a1a1a; /* softened from pure #000 — less harsh on the light bg, still AAA contrast */
   --muted: #595959; /* ~6:1 on --bg — passes WCAG AA for small text */
   --border: #ccc;
   --err: #c0392b;
@@ -362,18 +362,102 @@ h1, h2, h3 {
   padding: 2px 5px;
 }
 
-.prose pre {
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
-  border: 1px dashed var(--border);
-  padding: 20px;
+/* Code blocks — Shiki dual-theme card. `defaultColor:false` emits
+   --shiki-light/--shiki-dark vars; we switch them on [data-theme] exactly like
+   the rest of the palette (default = dark, matching the SSR default). */
+.prose pre.astro-code {
+  background-color: var(--shiki-dark-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
   overflow-x: auto;
   margin-bottom: 20px;
 }
+.prose pre.astro-code,
+.prose pre.astro-code span {
+  color: var(--shiki-dark);
+}
+[data-theme="light"] .prose pre.astro-code {
+  background-color: var(--shiki-light-bg);
+}
+[data-theme="light"] .prose pre.astro-code,
+[data-theme="light"] .prose pre.astro-code span {
+  color: var(--shiki-light);
+}
 
-.prose pre code {
+.prose pre.astro-code code {
   background: none;
   padding: 0;
   font-size: 13px;
+}
+
+/* Copy button — injected by Layout's inline script onto real-language blocks
+   only (plaintext file trees are skipped). The wrapper keeps the button pinned
+   to the top-right while the code itself scrolls horizontally. */
+.code-block {
+  position: relative;
+}
+.code-block .copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-family: var(--font-source-code-pro), monospace;
+  font-size: 11px;
+  line-height: 1;
+  padding: 5px 9px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.code-block:hover .copy-btn,
+.code-block .copy-btn:focus-visible {
+  opacity: 1;
+}
+.code-block .copy-btn:hover {
+  color: var(--fg);
+}
+.code-block .copy-btn.copied {
+  color: #2ea043;
+  opacity: 1;
+}
+
+/* Link hover preview — opt-in via `[text](url "preview")`. One reusable card,
+   appended to <body> by Layout's script; the screenshot is fetched only on
+   first hover. */
+.prose a[data-preview] {
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+.link-preview-card {
+  position: fixed;
+  z-index: 1001;
+  width: 320px;
+  max-width: 80vw;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+  pointer-events: none;
+}
+.link-preview-card.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.link-preview-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10; /* reserve space so there's no jump while loading */
+  object-fit: cover;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
 }
 
 .prose blockquote {
