@@ -55,7 +55,7 @@ I wanted a system where I could write privately, publish selectively, and set it
 ## Setting up on a new machine
 
 **Step 1 — Obsidian (manual, one-time):**
-1. Download Obsidian from https://obsidian.md
+1. Download Obsidian from [obsidian.md](https://obsidian.md "preview")
 2. Open Obsidian → Settings → Community plugins → disable Safe mode
 3. Browse → search "Templater" → Install → Enable
 4. Quit Obsidian (`Cmd+Q`)
