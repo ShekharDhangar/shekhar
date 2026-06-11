@@ -54,17 +54,15 @@ I wanted a system where I could write privately, publish selectively, and set it
 
 ## Setting up on a new machine
 
-**Step 1 — Obsidian (manual, one-time):**
+**Step 1 — install Obsidian (manual, one-time):**
 1. Download Obsidian from [obsidian.md](https://obsidian.md "preview")
-2. Open Obsidian → Settings → Community plugins → disable Safe mode
-3. Browse → search "Templater" → Install → Enable
-4. Quit Obsidian (`Cmd+Q`)
+2. Quit Obsidian (`Cmd+Q`) if it's running
 
-**Step 2 — everything else (automated):**
+**Step 2 — everything else (one command):**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ShekharDhangar/shekhar/main/setup.sh | bash
 ```
 
-This installs Node.js, clones the site repo, creates the brain folder structure, copies templates, and pre-configures Templater with folder templates.
+This installs Node.js, clones the site repo, creates the brain folder structure, copies templates, and installs + configures Templater (the plugin itself plus the folder templates).
 
-**Step 3:** Open Obsidian → open `~/brain` as vault → start writing.
+**Step 3:** Open Obsidian → open `~/brain` as vault. The first time, install the one plugin: Settings → Community plugins → turn off Restricted Mode → Browse → search **Templater** → Install → Enable. The folder-template config is already in place (setup did that), so it works the moment you enable it. Now start writing — frontmatter auto-fills on every new note in `blogs/` or `learnings/`.
