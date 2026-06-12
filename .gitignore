@@ -10,3 +10,6 @@ node_modules/
 .next/
 .wrangler/
 .superpowers/
+
+# superpowers workflow docs (specs/plans) — kept local, not tracked
+docs/superpowers/

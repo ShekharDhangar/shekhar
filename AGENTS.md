@@ -63,6 +63,12 @@ Keep the contract in sync: if you add a frontmatter field, update both `content.
   consumer reads from it — facts never get duplicated across page, terminal, and structured data.
 - **Logic lives in `src/lib` and is unit-tested.** `.astro` files stay thin; testable behavior
   goes in plain TS modules so Vitest can cover it (see `terminal.test.ts`).
+- **Tests assert behaviour, not implementation.** Drive a unit through its public interface and
+  assert observable outputs — never reach into private state, internal helpers, or exact tree
+  shapes. `terminal.test.ts` calls `runCommand`/`autocomplete` and checks what comes back, so a
+  harmless refactor never breaks it. A test that fails when you rename an internal is testing the
+  wrong thing. Cover the behaviour that matters: the typical case, the edge cases, and the failure
+  path (that it throws / escapes / degrades exactly as intended).
 - **Fail loud.** Missing/invalid data throws with a clear message (`linkHref`), never silently
   degrades.
 - **Security at the HTML boundary.** Untrusted text rendered into `innerHTML` goes through
@@ -100,6 +106,12 @@ Write to pass the linter the first time, not by adding escape hatches.
 - `npm run check` — `astro check` (types/diagnostics)
 - `npm run lint` — custom lint rules (the guidelines above)
 - `npm test` — Vitest once; `npm run test:watch` to watch
+
+## Git: never commit
+
+**Never run `git commit` or `git push`. Committing is always the user's job.** Make and
+stage changes, run the verification gate, and report what's ready — then stop and let the
+user commit. Do not commit even when a task or plan says to; this rule overrides those steps.
 
 ## Before you finish
 

@@ -1,6 +1,7 @@
 import { defineConfig, fontProviders } from 'astro/config';
 import { unified } from '@astrojs/markdown-remark';
 import sitemap from '@astrojs/sitemap';
+import { remarkObsidianComments, remarkHighlights, rehypeCallouts } from './src/lib/markdown/obsidian';
 
 export const FONT_VARIABLE = '--font-source-code-pro';
 
@@ -99,6 +100,9 @@ export default defineConfig({
     // Astro 6: plugins go through the processor; Shiki highlighting, heading
     // IDs, GFM and smartypants defaults are preserved by `unified()`. The
     // shikiConfig above reaches the processor via the shared markdown config.
-    processor: unified({ rehypePlugins: [rehypeLazyImages, rehypeLinkPreview] }),
+    processor: unified({
+      remarkPlugins: [remarkObsidianComments, remarkHighlights],
+      rehypePlugins: [rehypeCallouts, rehypeLazyImages, rehypeLinkPreview],
+    }),
   },
 });

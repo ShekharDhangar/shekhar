@@ -467,6 +467,69 @@ h1, h2, h3 {
   margin-bottom: 20px;
 }
 
+/* ── Atlassian-style callout panels (tinted background + icon, no heading) ── */
+.prose .callout {
+  --callout-rgb: 124, 124, 124;
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: rgb(var(--callout-rgb) / 0.12);
+}
+.prose .callout-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  color: rgb(var(--callout-rgb));
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.prose .callout-content { flex: 1 1 auto; min-width: 0; }
+.prose .callout-content > :first-child { margin-top: 0; }
+.prose .callout-content > :last-child { margin-bottom: 0; }
+.prose .callout-title { margin: 0 0 6px; color: rgb(var(--callout-rgb)); font-weight: 800; }
+
+/* Collapsible variant: <details> stacks the summary over the body. */
+.prose details.callout { display: block; }
+.prose details.callout > .callout-summary {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  cursor: pointer;
+  color: rgb(var(--callout-rgb));
+  font-weight: 800;
+}
+.prose details.callout > .callout-summary::-webkit-details-marker { display: none; }
+.prose details.callout > .callout-content { margin-top: 8px; padding-left: 28px; }
+.prose details.callout:not([open]) > .callout-content { display: none; }
+
+.prose [data-callout="note"],
+.prose [data-callout="info"] { --callout-rgb: 8, 109, 221; }
+.prose [data-callout="abstract"] { --callout-rgb: 0, 191, 188; }
+.prose [data-callout="todo"] { --callout-rgb: 8, 109, 221; }
+.prose [data-callout="tip"] { --callout-rgb: 0, 191, 165; }
+.prose [data-callout="success"] { --callout-rgb: 8, 185, 78; }
+.prose [data-callout="question"] { --callout-rgb: 224, 165, 14; }
+.prose [data-callout="warning"] { --callout-rgb: 236, 117, 0; }
+.prose [data-callout="failure"],
+.prose [data-callout="danger"],
+.prose [data-callout="bug"] { --callout-rgb: 233, 49, 71; }
+.prose [data-callout="example"] { --callout-rgb: 120, 82, 238; }
+.prose [data-callout="quote"] { --callout-rgb: 124, 124, 124; }
+
+/* ── Obsidian highlights ───────────────────────────────────────── */
+.prose mark {
+  background: rgb(255 214 10 / 0.30);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
 .prose a {
   text-decoration: underline;
 }
