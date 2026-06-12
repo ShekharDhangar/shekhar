@@ -46,8 +46,15 @@ won't collide with the existing Shiki / copy-button / link-preview setup.
 
 ## Components
 
-All three plugins live in `astro.config.mjs` alongside the existing two, and hand-roll
-their own tree walking (no `unist-util-visit` dependency) to match the existing style.
+The three plugins are **extracted into an importable module** —
+`src/lib/markdown/obsidian.mjs` (or one file per plugin in `src/lib/markdown/`) — and
+imported into `astro.config.mjs`. This keeps `astro.config.mjs` readable and, more
+importantly, makes each plugin unit-testable with vitest (the repo already runs vitest
+via `npm test`, e.g. `src/lib/terminal.test.ts`). Each plugin hand-rolls its own tree
+walking (no `unist-util-visit` dependency) to match the existing house style.
+
+The two existing plugins (`rehypeLazyImages`, `rehypeLinkPreview`) stay inline in
+`astro.config.mjs` — this work does not move them.
 
 ### 1. `rehypeCallouts` (rehype — operates on the HTML/hast tree)
 
@@ -124,9 +131,12 @@ Walks markdown text nodes and strips `%%comment%%`:
 
 ## Wiring
 
-In `astro.config.mjs`'s `markdown.processor`:
+In `astro.config.mjs`, import the plugins from `src/lib/markdown/` and wire them into
+`markdown.processor`:
 
 ```js
+import { remarkObsidianComments, remarkHighlights, rehypeCallouts } from './src/lib/markdown/obsidian.mjs';
+// ...
 processor: unified({
   remarkPlugins: [remarkObsidianComments, remarkHighlights],
   rehypePlugins: [rehypeCallouts, rehypeLazyImages, rehypeLinkPreview],
@@ -164,17 +174,24 @@ processor: unified({
 
 ## Verification
 
-- A fixture Markdown snippet exercising: each callout type, a custom title, a collapsed
-  (`-`) and open (`+`) callout, a nested callout, `==highlight==`, inline `%%comment%%`,
-  and `==x==` inside a code fence (must stay literal). Run through the processor and
-  assert the resulting HTML.
-- Visual pass on `src/content/learnings/The Answer is Elsewhere - DNS.md`, which already
-  contains `[!example]`, `[!note]`, and `==highlights==`.
-- Optional, proportional: small unit tests for each plugin if a test harness is added;
-  there is no test harness today, so this stays lightweight.
+The repo runs vitest via `npm test` (existing example: `src/lib/terminal.test.ts`).
+Because the plugins are extracted into `src/lib/markdown/`, they get real unit tests,
+built TDD-style (test first, then implement):
+
+- **Unit tests** (`src/lib/markdown/obsidian.test.ts`) exercising each plugin against
+  small fixtures: each callout type and alias, a custom title, a collapsed (`-`) and open
+  (`+`) callout, a nested callout, an unknown type (falls back to `note`), a plain
+  blockquote (untouched), `==highlight==`, inline + block `%%comment%%`, and the critical
+  case of `==x==` / `%%x%%` inside a code fence staying literal.
+- **Build check**: `npm run build` (and `astro check`) succeeds with the new processor
+  config.
+- **Visual pass** on `src/content/learnings/The Answer is Elsewhere - DNS.md`, which
+  already contains `[!example]`, `[!note]`, and `==highlights==`.
 
 ## Files touched
 
-- `astro.config.mjs` — add three plugins + wire into `processor`.
+- `src/lib/markdown/obsidian.mjs` (new) — the three plugins + icon/type map.
+- `src/lib/markdown/obsidian.test.ts` (new) — vitest unit tests.
+- `astro.config.mjs` — import the plugins + wire into `processor`.
 - `src/styles/global.css` — callout + mark styles within `.prose`.
 - (No changes to `content.config.ts` or `src/pages/learnings/[slug].astro`.)
