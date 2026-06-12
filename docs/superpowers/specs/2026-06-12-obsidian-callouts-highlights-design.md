@@ -46,15 +46,43 @@ won't collide with the existing Shiki / copy-button / link-preview setup.
 
 ## Components
 
-The three plugins are **extracted into an importable module** —
-`src/lib/markdown/obsidian.mjs` (or one file per plugin in `src/lib/markdown/`) — and
-imported into `astro.config.mjs`. This keeps `astro.config.mjs` readable and, more
-importantly, makes each plugin unit-testable with vitest (the repo already runs vitest
-via `npm test`, e.g. `src/lib/terminal.test.ts`). Each plugin hand-rolls its own tree
-walking (no `unist-util-visit` dependency) to match the existing house style.
+The three plugins are **extracted into an importable, unit-tested TS module** —
+`src/lib/markdown/obsidian.ts` — and imported into `astro.config.mjs`. This follows
+AGENTS.md's core convention: *logic lives in `src/lib` and is unit-tested; `.astro` (and
+config) files stay thin.* Each plugin hand-rolls its own tree walking (no
+`unist-util-visit` dependency) to match the existing house style.
 
 The two existing plugins (`rehypeLazyImages`, `rehypeLinkPreview`) stay inline in
 `astro.config.mjs` — this work does not move them.
+
+### AGENTS.md constraints baked into the implementation
+
+This repo's `scripts/lint-rules.mjs` **fails the build** on certain patterns, so the
+plugins must be written to pass the linter the first time (no escape hatches):
+
+- **No `else` / `else if`** — use early returns / guard clauses throughout.
+- **`if`-nesting ≤ 2 levels**, **no nested loops**, **≤ 2 loops per function** — favor
+  recursion for tree walking and extract helpers so no single function nests deeply.
+- **No swallowed errors** — any `catch` logs or rethrows.
+- **No long string literal repeated 3+ times** — drives the type table design below.
+
+Two further AGENTS.md points shape the design:
+
+- **Single source of truth + no duplicate strings:** one `CALLOUT_TYPES` table keyed by
+  canonical type holds `{ label, color, iconPath }`; an `ALIASES` map resolves
+  `summary→abstract`, `error→danger`, etc. to a canonical key. Colors/labels/icon paths
+  each appear exactly once — no repeated long strings, and adding a type is a one-line
+  table edit.
+- **Security at the HTML boundary:** the plugins build **hast element nodes**
+  (`{ type: 'element', tagName, properties, children }`), never raw HTML strings or
+  `innerHTML`. The hast→HTML serializer escapes text, so there is no injection surface.
+  This also keeps note content trusted-but-safe.
+
+**Graceful degradation (not "fail loud") for malformed content:** unlike `linkHref`
+(which throws on a bad *slug* — a programmer error), a malformed/unknown callout in a
+*note* must never crash the static build. Unknown types fall back to the `note` style and
+non-callout blockquotes pass through untouched. This matches AGENTS.md's "customizations
+stay portable / degrade gracefully" convention for Markdown extras.
 
 ### 1. `rehypeCallouts` (rehype — operates on the HTML/hast tree)
 
@@ -135,7 +163,7 @@ In `astro.config.mjs`, import the plugins from `src/lib/markdown/` and wire them
 `markdown.processor`:
 
 ```js
-import { remarkObsidianComments, remarkHighlights, rehypeCallouts } from './src/lib/markdown/obsidian.mjs';
+import { remarkObsidianComments, remarkHighlights, rehypeCallouts } from './src/lib/markdown/obsidian.ts';
 // ...
 processor: unified({
   remarkPlugins: [remarkObsidianComments, remarkHighlights],
@@ -183,14 +211,15 @@ built TDD-style (test first, then implement):
   (`+`) callout, a nested callout, an unknown type (falls back to `note`), a plain
   blockquote (untouched), `==highlight==`, inline + block `%%comment%%`, and the critical
   case of `==x==` / `%%x%%` inside a code fence staying literal.
-- **Build check**: `npm run build` (and `astro check`) succeeds with the new processor
-  config.
+- **Gate (AGENTS.md "before you finish")**: `npm run check`, `npm run lint`, and
+  `npm test` all pass. The pre-commit hook runs lint + tests, so green local is required.
+- **Build check**: `npm run build` succeeds with the new processor config.
 - **Visual pass** on `src/content/learnings/The Answer is Elsewhere - DNS.md`, which
   already contains `[!example]`, `[!note]`, and `==highlights==`.
 
 ## Files touched
 
-- `src/lib/markdown/obsidian.mjs` (new) — the three plugins + icon/type map.
+- `src/lib/markdown/obsidian.ts` (new) — the three plugins + icon/type map.
 - `src/lib/markdown/obsidian.test.ts` (new) — vitest unit tests.
 - `astro.config.mjs` — import the plugins + wire into `processor`.
 - `src/styles/global.css` — callout + mark styles within `.prose`.
