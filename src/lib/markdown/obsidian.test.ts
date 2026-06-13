@@ -53,13 +53,12 @@ describe('remarkObsidianComments', () => {
 });
 
 describe('rehypeCallouts', () => {
-  it('renders a basic [!note] callout with no visible type heading', async () => {
+  it('renders a basic [!note] callout as a plain tinted panel', async () => {
     const html = await render('> [!note]\n> hello world');
     expect(html).toContain('class="callout"');
     expect(html).toContain('data-callout="note"');
     expect(html).toContain('hello world');
-    expect(html).toContain('<svg'); // icon present
-    expect(html).toContain('aria-label="Note"'); // type kept for screen readers only
+    expect(html).not.toContain('<svg'); // no icon/symbol at all
     expect(html).not.toContain('callout-title'); // no visible "Note" heading
   });
 

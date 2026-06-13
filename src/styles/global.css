@@ -161,6 +161,10 @@ hr {
 .content {
   padding: 48px 40px;
   position: relative;
+  /* Let wide children (code blocks) scroll internally instead of pushing the
+     page wider than the viewport. Without this, a flex item defaults to
+     min-width:auto and expands to its content, causing horizontal page scroll. */
+  min-width: 0;
 }
 
 /* ── Theme toggle ─────────────────────────────────── */
@@ -325,6 +329,9 @@ h1, h2, h3 {
 /* ── Prose (rendered markdown) ────────────────────── */
 .prose {
   line-height: 1.8;
+  /* Break long unbreakable strings (URLs, inline code) so they wrap instead of
+     widening the page. Code blocks keep their own horizontal scroll. */
+  overflow-wrap: break-word;
 }
 
 .prose p {
@@ -377,8 +384,10 @@ h1, h2, h3 {
 .prose pre.astro-code span {
   color: var(--shiki-dark);
 }
+/* Light mode: Shiki's github-light bg is stark white against the gray page.
+   Use a soft gray derived from the page bg instead (keeps the syntax colors). */
 [data-theme="light"] .prose pre.astro-code {
-  background-color: var(--shiki-light-bg);
+  background-color: color-mix(in srgb, var(--fg) 6%, var(--bg));
 }
 [data-theme="light"] .prose pre.astro-code,
 [data-theme="light"] .prose pre.astro-code span {
@@ -468,47 +477,37 @@ h1, h2, h3 {
 }
 
 /* ── Atlassian-style callout panels (tinted background + icon, no heading) ── */
+/* Plain tinted panel — no icon, no heading. Background color signals the kind.
+   color-mix blends the accent into the page bg for an opaque, always-visible
+   tint in both themes (a low-alpha rgba washes out, especially on black). */
 .prose .callout {
   --callout-rgb: 124, 124, 124;
-  display: flex;
-  gap: 10px;
   margin: 20px 0;
-  padding: 14px 16px;
+  padding: 14px 18px;
   border-radius: 8px;
-  background: rgb(var(--callout-rgb) / 0.12);
+  background: color-mix(in srgb, rgb(var(--callout-rgb)) 30%, var(--bg));
 }
-.prose .callout-icon {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  margin-top: 3px;
-  color: rgb(var(--callout-rgb));
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+[data-theme="light"] .prose .callout {
+  background: color-mix(in srgb, rgb(var(--callout-rgb)) 22%, var(--bg));
 }
-.prose .callout-content { flex: 1 1 auto; min-width: 0; }
-.prose .callout-content > :first-child { margin-top: 0; }
-.prose .callout-content > :last-child { margin-bottom: 0; }
+.prose .callout > :first-child { margin-top: 0; }
+.prose .callout > :last-child { margin-bottom: 0; }
 .prose .callout-title { margin: 0 0 6px; color: rgb(var(--callout-rgb)); font-weight: 800; }
 
-/* Collapsible variant: <details> stacks the summary over the body. */
-.prose details.callout { display: block; }
+/* Collapsible variant: <details> stacks the (clickable) title over the body. */
 .prose details.callout > .callout-summary {
-  display: flex;
-  gap: 10px;
-  align-items: center;
   cursor: pointer;
+  margin-bottom: 6px;
   color: rgb(var(--callout-rgb));
   font-weight: 800;
 }
 .prose details.callout > .callout-summary::-webkit-details-marker { display: none; }
-.prose details.callout > .callout-content { margin-top: 8px; padding-left: 28px; }
+.prose details.callout > .callout-content > :first-child { margin-top: 0; }
+.prose details.callout > .callout-content > :last-child { margin-bottom: 0; }
+.prose details.callout:not([open]) > .callout-summary { margin-bottom: 0; }
 .prose details.callout:not([open]) > .callout-content { display: none; }
 
-.prose [data-callout="note"],
+.prose [data-callout="note"] { --callout-rgb: 245, 184, 64; } /* mango yellow */
 .prose [data-callout="info"] { --callout-rgb: 8, 109, 221; }
 .prose [data-callout="abstract"] { --callout-rgb: 0, 191, 188; }
 .prose [data-callout="todo"] { --callout-rgb: 8, 109, 221; }
@@ -523,11 +522,17 @@ h1, h2, h3 {
 .prose [data-callout="quote"] { --callout-rgb: 124, 124, 124; }
 
 /* ── Obsidian highlights ───────────────────────────────────────── */
+/* Dark mode default: a deeper, warmer amber so the highlight reads rich
+   against black rather than as a washed-out olive. Light mode keeps the
+   brighter highlighter yellow. */
 .prose mark {
-  background: rgb(255 214 10 / 0.30);
+  background: rgb(214 158 46 / 0.40);
   color: inherit;
   padding: 0 2px;
   border-radius: 2px;
+}
+[data-theme="light"] .prose mark {
+  background: rgb(255 214 10 / 0.45);
 }
 
 .prose a {
@@ -567,6 +572,11 @@ h1, h2, h3 {
   .page-wrap {
     flex: 1;
     min-height: 0;
+    /* Drop the desktop `margin: 0 auto`. On mobile the body is a flex column,
+       and auto cross-axis margins cancel the stretch — so the wrap shrinks to
+       its content width and centers, leaving gutters. margin:0 fills the width. */
+    margin: 0;
+    max-width: none;
   }
 
   .content-wrap {
