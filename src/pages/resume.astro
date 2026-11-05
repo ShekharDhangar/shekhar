@@ -1,0 +1,77 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { SUMMARY, EXPERIENCE, SKILLS, EDUCATION, RESUME_PDF } from '../lib/resume';
+---
+
+<Layout title="Resume — Shekhar" description="Resume of Shekhar Dhangar: backend engineer at Setu (Pine Labs) building payments, settlement, and reconciliation systems in Go, Temporal, and PostgreSQL.">
+  <div class="section">
+    <h1 class="section-heading">Resume</h1>
+    <hr class="section-divider" />
+    <p>{SUMMARY}</p>
+    <p class="post-desc resume-download"><a href={RESUME_PDF} download>download pdf ↓</a></p>
+  </div>
+
+  <div class="section">
+    <h2 class="section-heading">Experience</h2>
+    <hr class="section-divider" />
+    <ul class="post-list">
+      {EXPERIENCE.map((role) => (
+        <li class="post-item">
+          <span class="post-bullet">•</span>
+          <div class="post-body">
+            <div class="post-row">
+              <span class="post-title">{role.title}</span>
+              <span class="post-date">{role.dates}</span>
+            </div>
+            <p class="post-desc">{role.company} · {role.location}</p>
+            <ul class="resume-bullets">
+              {role.bullets.map((b) => <li>{b}</li>)}
+            </ul>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2 class="section-heading">Skills</h2>
+    <hr class="section-divider" />
+    <ul class="resume-skills">
+      {SKILLS.map((s) => (
+        <li><span class="post-title">{s.label}:</span> {s.items}</li>
+      ))}
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2 class="section-heading">Education</h2>
+    <hr class="section-divider" />
+    <div class="post-row">
+      <span class="post-title">{EDUCATION.school}</span>
+      <span class="post-date">{EDUCATION.dates}</span>
+    </div>
+    <p class="post-desc">{EDUCATION.degree} · {EDUCATION.location}</p>
+  </div>
+</Layout>
+
+<style>
+  .resume-bullets {
+    margin-top: 12px;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .resume-bullets li {
+    list-style: '– ';
+  }
+  .resume-download {
+    margin-top: 16px;
+  }
+  .resume-skills {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+</style>

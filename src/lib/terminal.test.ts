@@ -414,3 +414,47 @@ describe('cd is for directories, not posts', () => {
     expect(result.type).toBe('lines');
   });
 });
+
+describe('resume', () => {
+  it('ls at / lists resume alongside the dirs', () => {
+    const result = runCommand('ls', ctx('/'));
+    if (result.type !== 'lines') throw new Error('expected lines');
+    expect(result.lines.some(l => l.html === 'resume')).toBe(true);
+  });
+
+  it('resume navigates to /resume', () => {
+    expect(runCommand('resume', ctx())).toEqual({ type: 'navigate', path: '/resume' });
+  });
+
+  it('cd resume and cd /resume navigate to /resume', () => {
+    expect(runCommand('cd resume', ctx())).toEqual({ type: 'navigate', path: '/resume' });
+    expect(runCommand('cd /resume', ctx())).toEqual({ type: 'navigate', path: '/resume' });
+  });
+
+  it('cat resume prints the summary and each role', () => {
+    const result = runCommand('cat resume', ctx());
+    if (result.type !== 'lines') throw new Error('expected lines');
+    const text = result.lines.map(l => l.html).join('\n');
+    expect(text).toContain('Software Development Engineer II');
+    expect(text).toContain('Software Engineering Intern');
+    expect(text).toContain('Setu');
+  });
+
+  it('cat on anything else is an error', () => {
+    const result = runCommand('cat nope', ctx());
+    if (result.type !== 'lines') throw new Error('expected lines');
+    expect(result.lines[0].modifier).toBe('err');
+    expect(result.lines[0].html).toContain('nope');
+  });
+
+  it('help mentions resume', () => {
+    const result = runCommand('help', ctx());
+    if (result.type !== 'lines') throw new Error('expected lines');
+    expect(result.lines.some(l => l.html.includes('resume'))).toBe(true);
+  });
+
+  it('autocompletes res → resume and cd /res → cd /resume', () => {
+    expect(autocomplete('res', ctx())).toBe('resume');
+    expect(autocomplete('cd /res', ctx())).toBe('cd /resume');
+  });
+});

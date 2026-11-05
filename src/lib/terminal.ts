@@ -1,5 +1,6 @@
 import { SOCIAL_LINKS } from './links';
 import { LANGUAGES, DOMAINS } from './profile';
+import { SUMMARY, EXPERIENCE } from './resume';
 
 export type Post = { slug: string; title: string };
 export type SelectItem = { slug: string; title: string; path: string; external?: boolean };
@@ -101,6 +102,8 @@ function cmdHelp(): CommandResult {
     ['browse contacts (b)', 'select a contact interactively'],
     ['cd /blogs',           'navigate to blogs'],
     ['cd /learnings',       'navigate to learnings'],
+    ['resume',              'go to my resume'],
+    ['cat resume',          'print my resume here'],
     ['cd ..',               'go up one level'],
     ['pwd',                 'print current path'],
     ['home',                'go to home page'],
@@ -158,7 +161,7 @@ function cmdLs(args: string[], ctx: Context): CommandResult {
   if (!target) {
     const current = SECTIONS.find(s => ctx.currentPath.startsWith(`/${s}`));
     if (current) return listSlugs(postsIn(current, ctx), `no ${current} yet`);
-    return { type: 'lines', lines: SECTIONS.map(s => line(`${s}/`)) };
+    return { type: 'lines', lines: [...SECTIONS.map(s => line(`${s}/`)), line('resume')] };
   }
 
   const section = resolveSection(target);
@@ -207,6 +210,8 @@ function cmdCd(args: string[], ctx: Context): CommandResult {
   if (HOME_ALIASES.has(target)) return { type: 'navigate', path: '/' };
   if (target === '..') return { type: 'navigate', path: parentPath(ctx.currentPath) };
 
+  if (target.replace(/^\//, '') === 'resume') return { type: 'navigate', path: '/resume' };
+
   const section = resolveSection(target);
   if (section) return { type: 'navigate', path: `/${section}` };
 
@@ -232,10 +237,31 @@ function cmdOpen(args: string[], ctx: Context): CommandResult {
   return { type: 'lines', lines: [err(html`open: ${slug}: not found`)] };
 }
 
+function cmdCat(args: string[]): CommandResult {
+  const target = (args[0] ?? '').replace(/^\//, '');
+  if (target !== 'resume') {
+    return { type: 'lines', lines: [err(html`cat: ${args[0] ?? ''}: no such file (try 'cat resume')`)] };
+  }
+  return {
+    type: 'lines',
+    lines: [
+      muted(escapeHtml(SUMMARY)),
+      ...EXPERIENCE.flatMap(r => [
+        line(''),
+        line(html`${r.title} · ${r.company} · ${r.dates}`),
+        ...r.bullets.map(b => muted(html`&nbsp; – ${b}`)),
+      ]),
+      line(''),
+      muted(html`full page: <a href="/resume">/resume</a>`),
+    ],
+  };
+}
+
 // ── Autocomplete ───────────────────────────────────────────────
 
 const STATIC_CMDS = [
-  'help', 'whoami', 'skills', 'contact', 'pwd', 'home', 'blogs', 'learnings', 'clear',
+  'help', 'whoami', 'skills', 'contact', 'pwd', 'home', 'blogs', 'learnings', 'resume', 'clear',
+  'cat resume', 'cd /resume',
   'ls', 'ls blogs', 'ls learnings',
   'browse', 'browse blogs', 'browse learnings', 'browse contacts',
   'b blogs', 'b learnings', 'b contacts',
@@ -244,13 +270,14 @@ const STATIC_CMDS = [
 ];
 
 // Commands whose argument is a section or a post slug — completed dynamically.
-const ARG_CMDS = new Set(['cd', 'open', 'ls', 'browse', 'b']);
+const ARG_CMDS = new Set(['cd', 'open', 'ls', 'browse', 'b', 'cat']);
 
 function argCandidates(cmd: string, ctx: Context): string[] {
   const slugs = [...ctx.blogs, ...ctx.learnings].map(p => p.slug);
   switch (cmd) {
     case 'open':   return slugs;
-    case 'cd':     return ['blogs', 'learnings', '/blogs', '/learnings', '..'];
+    case 'cd':     return ['blogs', 'learnings', 'resume', '/blogs', '/learnings', '/resume', '..'];
+    case 'cat':    return ['resume'];
     case 'ls':     return ['blogs', 'learnings'];
     case 'browse':
     case 'b':      return ['blogs', 'learnings', 'contacts'];
@@ -301,6 +328,8 @@ export function runCommand(raw: string, ctx: Context): CommandResult {
     case 'home':      return { type: 'navigate', path: '/' };
     case 'blogs':     return { type: 'navigate', path: '/blogs' };
     case 'learnings': return { type: 'navigate', path: '/learnings' };
+    case 'resume':    return { type: 'navigate', path: '/resume' };
+    case 'cat':       return cmdCat(args);
     case 'dark':      return { type: 'theme', value: 'dark' };
     case 'light':     return { type: 'theme', value: 'light' };
     case 'clear':     return { type: 'clear' };
