@@ -39,7 +39,7 @@ export const EXPERIENCE: Role[] = [
     dates: 'Apr 2024 – Mar 2026',
     bullets: [
       'Built settlement automation to replace a manual ops process, then shipped same-day (T+0) settlement on top with direct revenue impact. Cut reconciliation turnaround from 1 hour to 20 minutes.',
-      "Built ReconX, Setu's reconciliation engine, 0 to 1, authoring the TDD from onboarding to reporting; an SQS queue with a concurrent Go worker service reconciles 200,000–300,000 transactions in under 5 minutes.",
+      "Built ReconX, Setu's reconciliation engine, 0 to 1, authoring the TDD from onboarding to reporting; an SQS queue with a concurrent Go worker service on AWS Fargate reconciles 200,000–300,000 transactions in under 5 minutes.",
       "Migrated Setu's UPI payment-link and callback flows from a partner bank to our in-house stack with zero downtime, scaling to 5,000–6,000 daily transactions.",
       'Set up Postgres logical replication so read-heavy finance reporting runs off a replica, and partitioned large, high-volume production tables with near-zero downtime, with cost savings of ~US$500/month through archival.',
       "Operated Setu's bill-payments platform as the engineering point of contact for internal teams and customers: owned on-call, incident RCA, and production monitoring; automated alert silencing for known downtime windows, and automated refund-file handling to cut support tickets.",
