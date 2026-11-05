@@ -31,6 +31,7 @@ export const EXPERIENCE: Role[] = [
     bullets: [
       'Architected and built, from scratch, a QR metro-ticketing product for a major e-commerce integration (ONDC): authored the full TDD as engineering owner, covering a Temporal-based ticketing flow and an in-house settlement and money-movement engine; load-tested to 100 RPS.',
       "Designed the upstream integration for Setu's cross-border remittance product: order creation, KYC, and callback flows with the remittance provider.",
+      'Built an AI on-call agent with pi.dev that handles on-call issues and debugs production problems from Slack, with permission gates and controlled access to internal resources (database, logs, code repository).',
     ],
   },
   {
